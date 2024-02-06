@@ -1,0 +1,8 @@
+spring:
+  profiles:
+    include: secret
+logging:
+  level:
+    io.github.artemptushkin.ai.assistants: debug
+gitlab:
+  host: "https://gitlab.com"

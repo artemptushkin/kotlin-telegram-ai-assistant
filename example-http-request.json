@@ -1,0 +1,8 @@
+{
+  "url": "https://gitlab.com/api/v4/merge_requests",
+  "method": "GET",
+  "queries": "scope=assigned_to_me&state=opened",
+  "headers": [
+    "PRIVATE-TOKEN: <your_access_token>"
+  ]
+}
