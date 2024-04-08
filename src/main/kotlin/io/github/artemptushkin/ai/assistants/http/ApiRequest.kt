@@ -13,16 +13,16 @@ data class ApiRequest(
 
 fun ApiRequest.httpMethod() = HttpMethod.valueOf(method)
 
-fun ApiRequest.uri(k: String, v: String): URI {
+fun ApiRequest.uri(defaultQueries: Map<String, String>): URI {
     return if (queries.isNullOrEmpty()) {
         URI.create(url)
     } else {
-        val filteredQueriesStr = this.filterQueriesString(k, v)
+        val filteredQueriesStr = this.filterAndSetDefaultQueries(defaultQueries)
         URI.create("$url?$filteredQueriesStr")
     }
 }
 
-fun String.toQueryMap(): Map<String, String> {
+fun String.getQueryMap(): Map<String, String> {
     val queryMap = mutableMapOf<String, String>()
     val keyValuePairs = this.split("&")
     for (pair in keyValuePairs) {
@@ -57,13 +57,13 @@ fun ApiRequest.staticHeaders(): Map<String, String> = this.headers
     ?.toMap() ?: emptyMap()
 
 fun ApiRequest.filterQueries(): MutableMap<String, String> = this.queries
-    ?.toQueryMap()
+    ?.getQueryMap()
     ?.filter { !it.value.startsWith('<') && !it.value.endsWith('>') }
     ?.toMutableMap() ?: mutableMapOf()
 
-fun ApiRequest.filterQueriesString(k: String, v: String): String = this.filterQueries()
+fun ApiRequest.filterAndSetDefaultQueries(defaultQueries: Map<String, String>): String = this.filterQueries()
     .also {
-        it[k] = v
+        defaultQueries.forEach { (k, v) -> it[k] = v }
     }
     .entries
     .joinToString("&")

@@ -52,6 +52,9 @@ class RunService(
             val attempt = AtomicInteger(0)
             async {
                 while (isActive && attempt.get() < MAX_ATTEMPTS) {
+                    if (attempt.get() + 1 == MAX_ATTEMPTS) {
+                        bot.sendMessage(chat, "Proceeding with the last attempt out of $MAX_ATTEMPTS to get an answer from the assistant...")
+                    }
                     delay(Duration.parse("3s"))
                     bot.sendChatAction(chat, ChatAction.TYPING)
                     val currentAttempt = attempt.getAndIncrement()
@@ -142,6 +145,6 @@ class RunService(
 
     companion object {
         val logger = LoggerFactory.getLogger(RunService::class.java)!!
-        const val MAX_ATTEMPTS = 5
+        const val MAX_ATTEMPTS = 10
     }
 }

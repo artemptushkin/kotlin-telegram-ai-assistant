@@ -28,7 +28,7 @@ class GitlabConfig(
 
     @Bean
     fun gitlabHttpRequestFunction(objectMapper: ObjectMapper): HttpRequestFunction = HttpRequestFunction(
-        objectMapper, gitlabProperties.host, gitlabRestClient(), alphaVantageProperties
+        objectMapper, gitlabProperties.host, gitlabRestClient()
     )
 
     @Bean
@@ -39,7 +39,9 @@ class GitlabConfig(
 
     @Bean
     fun alphaVantageRequestFunction(objectMapper: ObjectMapper): HttpRequestFunction = HttpRequestFunction(
-        objectMapper, alphaVantageProperties.host, alphaVantageClient(), alphaVantageProperties
+        objectMapper, alphaVantageProperties.host, alphaVantageClient(), mapOf(
+            "apikey" to alphaVantageProperties.token
+        )
     )
 }
 
