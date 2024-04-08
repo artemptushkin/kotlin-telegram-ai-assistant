@@ -3,6 +3,7 @@ package io.github.artemptushkin.ai.assistants.http
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
+import io.github.artemptushkin.ai.assistants.gitlab.AlphaVantageProperties
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.slf4j.LoggerFactory
 import org.springframework.web.client.RestClient
@@ -10,7 +11,8 @@ import org.springframework.web.client.RestClient
 class HttpRequestFunction(
     private val objectMapper: ObjectMapper,
     private val host: String,
-    private val restClient: RestClient
+    private val restClient: RestClient,
+    private val props: AlphaVantageProperties
 ) : OpenAiFunction {
     override fun handle(from: String): String {
         try {
@@ -20,7 +22,7 @@ class HttpRequestFunction(
             return if (httpUrl.host == host) {
                 restClient
                     .method(apiRequest.httpMethod())
-                    .uri(apiRequest.uri())
+                    .uri(apiRequest.uri("apikey", props.token)) // case sensetive apikey key
                     .also {
                         if (!apiRequest.headers.isNullOrEmpty()) {
                             it.headers { apiRequest.staticHeaders() }

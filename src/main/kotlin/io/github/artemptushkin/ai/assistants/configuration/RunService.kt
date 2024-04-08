@@ -17,11 +17,9 @@ import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.stereotype.Service
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
-@Service
 class RunService(
     private val openAiService: OpenAiService,
     private val chatContext: ChatContext,

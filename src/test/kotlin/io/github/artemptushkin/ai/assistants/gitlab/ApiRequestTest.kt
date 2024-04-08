@@ -3,6 +3,7 @@ package io.github.artemptushkin.ai.assistants.gitlab
 import io.github.artemptushkin.ai.assistants.http.ApiRequest
 import io.github.artemptushkin.ai.assistants.http.pathWithQueries
 import io.github.artemptushkin.ai.assistants.http.staticHeaders
+import io.github.artemptushkin.ai.assistants.http.toQueryMap
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -80,5 +81,30 @@ class ApiRequestTest {
 
         // Then
         assertThat(result).isEqualTo("/api/v1/resource?param=value")
+    }
+
+    @Test
+    fun testToQueryMap() {
+        val queryString = "symbol=MSFT&interval=5min&apikey=<YOUR_API_KEY>"
+        val expectedMap = mapOf(
+            "symbol" to "MSFT",
+            "interval" to "5min",
+            "apikey" to "<YOUR_API_KEY>"
+        )
+        assertThat(queryString.toQueryMap()).isEqualTo(expectedMap)
+    }
+
+    @Test
+    fun testToQueryMapSinglePair() {
+        val queryString = "symbol=MSFT"
+        val expectedMap = mapOf("symbol" to "MSFT")
+        assertThat(expectedMap).isEqualTo(queryString.toQueryMap())
+    }
+
+    @Test
+    fun testToQueryMapEmptyString() {
+        val queryString = ""
+        val expectedMap = emptyMap<String, String>()
+        assertThat(expectedMap).isEqualTo(queryString.toQueryMap())
     }
 }

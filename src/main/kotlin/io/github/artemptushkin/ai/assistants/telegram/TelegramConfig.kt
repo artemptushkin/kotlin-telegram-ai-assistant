@@ -11,6 +11,7 @@ import com.theokanning.openai.messages.MessageRequest
 import com.theokanning.openai.service.OpenAiService
 import com.theokanning.openai.threads.Thread
 import com.theokanning.openai.threads.ThreadRequest
+import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
@@ -19,6 +20,7 @@ import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -38,16 +40,19 @@ fun openAiRunsListenerDispatcher(): CoroutineDispatcher = Executors.newFixedThre
 @EnableConfigurationProperties(value = [TelegramProperties::class])
 class TelegramConfiguration(
     private val telegramProperties: TelegramProperties,
-    private val openAiService: OpenAiService,
-    private val chatContext: ChatContext,
-    private val runService: RunService
+    private val chatContext: ChatContext
 ) {
 
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
 
     @Bean
-    fun telegramBot(): Bot {
+    fun telegramBot(
+        openAiService: OpenAiService,
+        @Qualifier("openAiFunctions")
+        openAiFunctions: Map<String, OpenAiFunction>,
+    ): Bot {
+        val runService = RunService(openAiService, chatContext, telegramProperties, openAiFunctions, runsServiceDispatcher())
         val dispatcher = botCoroutineDispatcher()
         return bot {
             logLevel = LogLevel.Error

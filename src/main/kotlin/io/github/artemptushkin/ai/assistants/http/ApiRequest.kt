@@ -13,12 +13,23 @@ data class ApiRequest(
 
 fun ApiRequest.httpMethod() = HttpMethod.valueOf(method)
 
-fun ApiRequest.uri(): URI {
+fun ApiRequest.uri(k: String, v: String): URI {
     return if (queries.isNullOrEmpty()) {
         URI.create(url)
     } else {
-        URI.create("$url?$queries")
+        val filteredQueriesStr = this.filterQueriesString(k, v)
+        URI.create("$url?$filteredQueriesStr")
     }
+}
+
+fun String.toQueryMap(): Map<String, String> {
+    val queryMap = mutableMapOf<String, String>()
+    val keyValuePairs = this.split("&")
+    for (pair in keyValuePairs) {
+        val (key, value) = pair.split("=")
+        queryMap[key] = value
+    }
+    return queryMap
 }
 
 fun ApiRequest.pathWithQueries(): String {
@@ -44,3 +55,15 @@ fun ApiRequest.staticHeaders(): Map<String, String> = this.headers
     }
     ?.filter { !it.second.startsWith('<') && !it.second.endsWith('>') }
     ?.toMap() ?: emptyMap()
+
+fun ApiRequest.filterQueries(): MutableMap<String, String> = this.queries
+    ?.toQueryMap()
+    ?.filter { !it.value.startsWith('<') && !it.value.endsWith('>') }
+    ?.toMutableMap() ?: mutableMapOf()
+
+fun ApiRequest.filterQueriesString(k: String, v: String): String = this.filterQueries()
+    .also {
+        it[k] = v
+    }
+    .entries
+    .joinToString("&")
