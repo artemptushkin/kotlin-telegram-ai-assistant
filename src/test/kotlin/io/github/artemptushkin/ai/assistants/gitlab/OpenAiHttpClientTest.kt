@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class HttpRequestFunctionTest {
+class OpenAiHttpClientTest {
 
     @Autowired
     lateinit var httpRequestFunction: HttpRequestFunction
@@ -16,6 +16,17 @@ class HttpRequestFunctionTest {
     @Test
     fun `it-calls-gitlab-successfully`() {
         val assistantFunctionObject = "{ \"url\": \"https://gitlab.com/api/v4/merge_requests\", \"method\": \"GET\", \"queries\": \"scope=assigned_to_me&state=opened&view=simple\", \"headers\": [ \"PRIVATE-TOKEN: <your_access_token>\" ] }"
+
+        runBlocking {
+            val response = httpRequestFunction.handle(assistantFunctionObject)
+
+            assertThat(response).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `it-calls-alpha-vantage-successfully`() {
+        val assistantFunctionObject = "{\"url\":\"https://www.alphavantage.co/query\",\"method\":\"GET\",\"queries\":\"function=GLOBAL_QUOTE&symbol=META&apikey=<your_api_key>\"}"
 
         runBlocking {
             val response = httpRequestFunction.handle(assistantFunctionObject)

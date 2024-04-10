@@ -5,7 +5,9 @@ logging:
   level:
     io.github.artemptushkin.ai.assistants: debug
     org.springframework.http.client: DEBUG
-gitlab:
-  host: "https://gitlab.com"
-alpha-vantage:
-  host: www.alphavantage.co
+http-clients:
+  clients:
+    gitlab:
+      host: gitlab.com
+    alpha-vantage:
+      host: www.alphavantage.co

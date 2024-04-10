@@ -5,47 +5,22 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.slf4j.LoggerFactory
-import org.springframework.web.client.RestClient
 
 class HttpRequestFunction(
     private val objectMapper: ObjectMapper,
-    private val host: String,
-    private val restClient: RestClient,
-    private val defaultQueries: Map<String, String> = emptyMap()
-) : OpenAiFunction {
+    private val hostToHttpClients: Map<String, OpenAiHttpClient>
+): OpenAiFunction {
     override fun handle(from: String): String {
-        try {
-            logger.debug("Proceeding with the proposed HTTP request request: $from")
-            val apiRequest = objectMapper.readValue<ApiRequest>(from)
-            val httpUrl = apiRequest.url.toHttpUrl()
-            val uriWithQueries = apiRequest.uri(defaultQueries)
-            return if (httpUrl.host == host) {
-                restClient
-                    .method(apiRequest.httpMethod())
-                    .uri(uriWithQueries)
-                    .also {
-                        if (!apiRequest.headers.isNullOrEmpty()) {
-                            it.headers { apiRequest.staticHeaders() }
-                        }
-                    }
-                    .retrieve()
-                    .body(String::class.java) ?: "No response body available" // todo it should return full http response as a json
-                    .also {
-                        logger.debug("Http Response received: $it")
-                    }
-            } else {
-                logger.warn("Received unexpected host: ${httpUrl.host}")
-                "Can not proceed with this operation code"
-            }
-        } catch (e: Exception) {
-            logger.error("Exception handled during the HTTP call", e)
-            return "Exception handled during the HTTP call"
-        }
+        logger.debug("Proceeding with the proposed HTTP request request: $from")
+        val apiRequest = objectMapper.readValue<ApiRequest>(from)
+        val httpUrl = apiRequest.url.toHttpUrl()
+        val httpRequestFunction = hostToHttpClients[httpUrl.host] ?: throw IllegalStateException("I'm not allowed to request this server")
+        return httpRequestFunction.execute(apiRequest)
     }
 
     override fun name(): String = "http-request"
 
     companion object {
-        val logger = LoggerFactory.getLogger(HttpRequestFunction::class.java)!!
+        val logger = LoggerFactory.getLogger(OpenAiHttpClient::class.java)!!
     }
 }
