@@ -51,7 +51,10 @@ class RunService(
             async {
                 while (isActive && attempt.get() < MAX_ATTEMPTS) {
                     if (attempt.get() + 1 == MAX_ATTEMPTS) {
-                        bot.sendMessage(chat, "Proceeding with the last attempt out of $MAX_ATTEMPTS to get an answer from the assistant...")
+                        bot.sendMessage(
+                            chat,
+                            "Proceeding with the last attempt out of $MAX_ATTEMPTS to get an answer from the assistant..."
+                        )
                     }
                     delay(Duration.parse("3s"))
                     bot.sendChatAction(chat, ChatAction.TYPING)
@@ -77,6 +80,7 @@ class RunService(
                                         }
                                         .also { this.cancel() }
                                 }
+
                                 "failed" -> {
                                     openAiService
                                         .listMessages(currentThread.id)
@@ -97,7 +101,7 @@ class RunService(
 
                                 "requires_action" -> {
                                     bot.sendChatAction(chat, ChatAction.TYPING)
-                                    run.requiredAction.submitToolOutputs.toolCalls.forEach { toolCall ->
+                                    run.requiredAction.submitToolOutputs.toolCalls.map { toolCall ->
                                         if (toolCall.type == "function") {
                                             val toolFunction = toolCall.function
                                             val rawArgs = toolFunction.arguments
@@ -106,31 +110,31 @@ class RunService(
                                                     if (it != null) {
                                                         val result = it.handle(rawArgs)
                                                         logger.info("Submitting tool outputs, thread: ${currentThread.id}, run: ${run.id}")
-                                                        openAiService.submitToolOutputs(
-                                                            currentThread.id, run.id, SubmitToolOutputsRequest
-                                                                .builder()
-                                                                .toolOutputs(
-                                                                    listOf(
-                                                                        SubmitToolOutputRequestItem
-                                                                            .builder()
-                                                                            .toolCallId(toolCall.id)
-                                                                            .output(result)
-                                                                            .build()
-                                                                    )
-                                                                )
-                                                                .build()
-                                                        )
+                                                        SubmitToolOutputRequestItem
+                                                            .builder()
+                                                            .toolCallId(toolCall.id)
+                                                            .output(result)
+                                                            .build()
                                                     } else {
                                                         logger.error("Received an unknown function - ${toolFunction.name}, please implement it")
                                                         bot.sendMessage(
                                                             chat,
                                                             "Received an unknown function - ${toolFunction.name}, please ask the administrator to implement it, see /help for info"
                                                         )
+                                                        null
                                                     }
                                                 }
+                                        } else {
+                                            null
                                         }
+                                    }.let {
+                                        openAiService.submitToolOutputs(
+                                            currentThread.id, run.id, SubmitToolOutputsRequest
+                                                .builder()
+                                                .toolOutputs(it)
+                                                .build()
+                                        )
                                     }
-
                                 }
 
                                 else -> {}

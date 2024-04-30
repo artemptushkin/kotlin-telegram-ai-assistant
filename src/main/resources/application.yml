@@ -11,3 +11,5 @@ http-clients:
       host: gitlab.com
     alpha-vantage:
       host: www.alphavantage.co
+    coinmarketcap:
+      host: pro-api.coinmarketcap.com
