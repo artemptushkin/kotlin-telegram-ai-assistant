@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
 import org.springframework.web.client.RestClient
+import java.util.Base64
 
 @Configuration
 @EnableConfigurationProperties(
@@ -36,6 +37,9 @@ class HttpClientsConfiguration(
                     clientProperties.authorizationBearer?.let {
                         builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer $it")
                     }
+                    clientProperties.basicAuth?.let {
+                        builder.defaultHeader(HttpHeaders.AUTHORIZATION, it.basicAuth())
+                    }
                 }
                 .build(), clientProperties.defaultQueries.associate { query ->
                 query.key to query.value
@@ -53,9 +57,17 @@ data class HttpClientsProperties(
 data class HttpClientProperties(
     val host: String,
     val authorizationBearer: String? = null,
+    val basicAuth: BasicAuth? = null,
     val defaultQueries: List<DefaultQueriesProperties> = emptyList()
 ) {
     fun baseUrl() = "https//${host}"
+}
+
+data class BasicAuth(
+    val username: String,
+    val password: String,
+) {
+    fun basicAuth() = "Basic ${Base64.getEncoder().encodeToString("$username:$password".toByteArray())}"
 }
 
 data class DefaultQueriesProperties(
