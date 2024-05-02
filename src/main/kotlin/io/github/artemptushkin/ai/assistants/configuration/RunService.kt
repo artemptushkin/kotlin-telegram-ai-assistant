@@ -108,6 +108,7 @@ class RunService(
                                             openAiFunctions[toolFunction.name]
                                                 .let {
                                                     if (it != null) {
+                                                        logger.debug("Executing function '${it.name()}'")
                                                         val result = it.handle(rawArgs)
                                                         logger.info("Submitting tool outputs, thread: ${currentThread.id}, run: ${run.id}")
                                                         SubmitToolOutputRequestItem
