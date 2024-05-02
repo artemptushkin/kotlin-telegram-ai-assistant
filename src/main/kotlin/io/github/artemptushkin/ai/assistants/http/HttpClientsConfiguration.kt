@@ -20,7 +20,10 @@ class HttpClientsConfiguration(
 ) {
 
     @Bean
-    fun httpRequestFunction(objectMapper: ObjectMapper, hostToHttpClients: Map<String, OpenAiHttpClient>): HttpRequestFunction =
+    fun httpRequestFunction(
+        objectMapper: ObjectMapper,
+        hostToHttpClients: Map<String, OpenAiHttpClient>
+    ): HttpRequestFunction =
         HttpRequestFunction(
             objectMapper, hostToHttpClients
         )
@@ -41,9 +44,10 @@ class HttpClientsConfiguration(
                         builder.defaultHeader(HttpHeaders.AUTHORIZATION, it.basicAuth())
                     }
                 }
-                .build(), clientProperties.defaultQueries.associate { query ->
-                query.key to query.value
-            }
+                .build(),
+                clientProperties.defaultQueries?.associate { query ->
+                    query.key to query.value
+                } ?: emptyMap()
             )
         }
         .associateBy { it.host }
@@ -58,7 +62,7 @@ data class HttpClientProperties(
     val host: String,
     val authorizationBearer: String? = null,
     val basicAuth: BasicAuth? = null,
-    val defaultQueries: List<DefaultQueriesProperties> = emptyList()
+    val defaultQueries: List<DefaultQueriesProperties> = emptyList(),
 ) {
     fun baseUrl() = "https//${host}"
 }

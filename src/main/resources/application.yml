@@ -13,5 +13,3 @@ http-clients:
       host: www.alphavantage.co
     coinmarketcap:
       host: pro-api.coinmarketcap.com
-    cryptocurrencyalerting:
-      host: api.cryptocurrencyalerting.com
