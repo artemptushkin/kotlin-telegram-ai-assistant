@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.4"
     kotlin("jvm") version "1.9.20"
     kotlin("plugin.spring") version "1.9.20"
+    id("com.google.cloud.tools.jib") version "3.4.2"
 }
 
 group = "io.github.artemptushkin"
@@ -22,6 +23,7 @@ repositories {
 dependencies {
     implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.1")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("com.theokanning.openai-gpt3-java:service:0.18.2")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -44,4 +46,19 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
+jib {
+    from {
+        image = "eclipse-temurin:17-jre"
+    }
+    extraDirectories {
+        paths {
+            path {
+                setFrom("config")
+                into = "/config"
+            }
+        }
+    }
 }
