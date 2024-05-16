@@ -64,9 +64,11 @@ class TelegramConfiguration(
             logLevel = LogLevel.Error
             token = telegramProperties.bot.token
             coroutineDispatcher = dispatcher
-            webhook {
-                url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined")
-                allowedUpdates = listOf("message")
+            if (environment.acceptsProfiles(Profiles.of("webhook"))) {
+                webhook {
+                    url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined")
+                    allowedUpdates = listOf("message")
+                }
             }
             dispatch {
                 command("start") {
