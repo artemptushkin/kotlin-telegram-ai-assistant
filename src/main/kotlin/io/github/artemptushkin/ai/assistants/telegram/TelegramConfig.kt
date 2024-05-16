@@ -6,14 +6,17 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.logging.LogLevel
+import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.messages.MessageRequest
+import com.theokanning.openai.runs.Run
 import com.theokanning.openai.service.OpenAiService
 import com.theokanning.openai.threads.Thread
 import com.theokanning.openai.threads.ThreadRequest
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
+import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
 import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
 import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
@@ -25,6 +28,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
+import org.springframework.core.env.Profiles
 import java.util.concurrent.Executors
 
 
@@ -40,7 +45,8 @@ fun openAiRunsListenerDispatcher(): CoroutineDispatcher = Executors.newFixedThre
 @EnableConfigurationProperties(value = [TelegramProperties::class])
 class TelegramConfiguration(
     private val telegramProperties: TelegramProperties,
-    private val chatContext: ChatContext
+    private val chatContext: ChatContext,
+    private val environment: Environment
 ) {
 
     @Bean
@@ -58,6 +64,10 @@ class TelegramConfiguration(
             logLevel = LogLevel.Error
             token = telegramProperties.bot.token
             coroutineDispatcher = dispatcher
+            webhook {
+                url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined")
+                allowedUpdates = listOf("message")
+            }
             dispatch {
                 command("start") {
                     val chat = this.message.chat.id.toChat()
@@ -87,6 +97,9 @@ class TelegramConfiguration(
                         bot.sendMessage(chat, "No current thread, create one with /thread")
                     } else {
                         thread as Thread
+                        chatContext.get(ContextKey.run(chat))?.let {
+                            openAiService.cancelRun(thread.id, (it as Run).id)
+                        }
                         openAiService.deleteThread(thread.id)
                         logger.debug("Thread has been deleted ${thread.id}")
                         bot.sendMessage(chat, "Thread has been deleted ${thread.id}")
@@ -154,7 +167,13 @@ class TelegramConfiguration(
                 }
             }
         }.apply {
-            this.startPolling()
+            if (environment.acceptsProfiles(Profiles.of("webhook"))) {
+                logger.info("Starting telegram webhooks...")
+                this.startWebhook()
+            } else {
+                logger.info("Starting telegram polling...")
+                this.startPolling()
+            }
         }
     }
 
@@ -165,7 +184,12 @@ class TelegramConfiguration(
 
 @ConfigurationProperties("telegram")
 data class TelegramProperties(
-    val bot: BotProperties = BotProperties()
+    val bot: BotProperties = BotProperties(),
+    val webhook: WebHookProperties = WebHookProperties()
+)
+
+data class WebHookProperties(
+    val url: String? = null
 )
 
 data class BotProperties(
