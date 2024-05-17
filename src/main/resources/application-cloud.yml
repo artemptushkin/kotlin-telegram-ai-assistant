@@ -1,0 +1,9 @@
+spring:
+  cloud:
+    gcp:
+      # https://github.com/GoogleCloudPlatform/spring-cloud-gcp/blob/main/docs/src/main/asciidoc/logging.adoc
+      logging:
+        enabled: true
+      # https://github.com/GoogleCloudPlatform/spring-cloud-gcp/blob/main/docs/src/main/asciidoc/trace.adoc
+      trace:
+        enabled: true

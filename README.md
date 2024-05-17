@@ -131,4 +131,12 @@ telegram.bot:
 gitlab.token: glpat-KZofGC_Nan4...
 ```
 
-You can populate the git ignored `application-secret.yml` file to store them locally, the `secret` profile is supposed to be enabled. 
+You can populate the git ignored `application-secret.yml` file to store them locally, the `secret` profile is supposed to be enabled.
+
+## Deployment
+
+### Google cloud
+
+#### Local run
+
+https://cloud.google.com/docs/authentication/provide-credentials-adc#local-dev

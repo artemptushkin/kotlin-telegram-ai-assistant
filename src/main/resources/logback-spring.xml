@@ -1,0 +1,9 @@
+<configuration>
+    <springProfile name="cloud">
+        <include resource="com/google/cloud/spring/logging/logback-json-appender.xml"/>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+</configuration>

@@ -10,3 +10,17 @@ http-clients:
       host: www.alphavantage.co
     coinmarketcap:
       host: pro-api.coinmarketcap.com
+server:
+  shutdown: graceful
+spring:
+  task:
+    execution:
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
+  cloud:
+    gcp:
+      logging:
+        enabled: false
+      trace:
+        enabled: true

@@ -32,6 +32,7 @@ class RunService(
     suspend fun createAndRun(bot: Bot, message: Message) {
         val chat = message.chat.id.toChat()
         val thread = chatContext.get(ContextKey.thread(chat))
+        bot.sendChatAction(chat, ChatAction.TYPING)
         if (thread == null) {
             bot.sendMessage(chat, "No current thread, create one with /thread")
         } else {

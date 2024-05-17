@@ -5,6 +5,7 @@ import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
+import com.github.kotlintelegrambot.entities.ChatAction
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
@@ -114,6 +115,7 @@ class TelegramConfiguration(
                     val chat = this.message.chat.id.toChat()
                     if (message.text != null && !message.isCommand()) {
                         val thread = chatContext.get(thread(chat))
+                        bot.sendChatAction(chat, ChatAction.TYPING)
                         if (thread == null) {
                             logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id}")
                             val newThread = openAiService.createThread(
@@ -164,7 +166,12 @@ class TelegramConfiguration(
                                 logger.debug("Open AI message created after the previous run cancellation, messageid: ${openAiMessage.id}")
                             }
                         }
-                        runService.createAndRun(bot, message)
+                        try {
+                            runService.createAndRun(bot, message)
+                        } catch (e: Exception) {
+                            logger.error(e.message, e)
+                            bot.sendMessage(chat, "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant.")
+                        }
                     }
                 }
             }

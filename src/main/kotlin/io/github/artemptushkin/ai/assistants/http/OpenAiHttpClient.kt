@@ -33,7 +33,7 @@ class OpenAiHttpClient(
             }
         } catch (e: Exception) {
             logger.error("Exception handled during the HTTP call", e)
-            return "Exception handled during the HTTP call"
+            return "Exception handled during the HTTP call. Assistant should evaluate the following error message: ${e.message}. Assistant should repeat the function execution if possible"
         }
     }
 
