@@ -7,3 +7,6 @@ spring:
       # https://github.com/GoogleCloudPlatform/spring-cloud-gcp/blob/main/docs/src/main/asciidoc/trace.adoc
       trace:
         enabled: true
+management:
+  tracing:
+    enabled: true

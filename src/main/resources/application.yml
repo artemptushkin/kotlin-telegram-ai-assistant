@@ -24,3 +24,6 @@ spring:
         enabled: false
       trace:
         enabled: true
+management:
+  tracing:
+    enabled: false

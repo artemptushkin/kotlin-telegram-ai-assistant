@@ -25,7 +25,6 @@ dependencies {
         platform("com.google.cloud:spring-cloud-gcp-dependencies:5.3.0")
     )
     implementation("com.google.cloud:spring-cloud-gcp-starter-logging")
-    implementation("com.google.cloud:spring-cloud-gcp-starter-trace")
 
     implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.1")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
