@@ -4,12 +4,13 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatAction
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
-import com.theokanning.openai.runs.Run
-import com.theokanning.openai.runs.RunCreateRequest
-import com.theokanning.openai.runs.SubmitToolOutputRequestItem
-import com.theokanning.openai.runs.SubmitToolOutputsRequest
+import com.theokanning.openai.assistants.message.MessageListSearchParameters
+import com.theokanning.openai.assistants.run.Run
+import com.theokanning.openai.assistants.run.RunCreateRequest
+import com.theokanning.openai.assistants.run.SubmitToolOutputRequestItem
+import com.theokanning.openai.assistants.run.SubmitToolOutputsRequest
+import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.service.OpenAiService
-import com.theokanning.openai.threads.Thread
 import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
@@ -71,7 +72,7 @@ class RunService(
                             when (run.status) {
                                 "completed" -> {
                                     openAiService
-                                        .listMessages(currentThread.id)
+                                        .listMessages(currentThread.id, MessageListSearchParameters())
                                         .data
                                         .filter { it.runId == run.id }
                                         .flatMap { it.content }
@@ -84,7 +85,7 @@ class RunService(
 
                                 "failed" -> {
                                     openAiService
-                                        .listMessages(currentThread.id)
+                                        .listMessages(currentThread.id, MessageListSearchParameters())
                                         .data
                                         .filter { it.runId == run.id }
                                         .sortedBy { it.createdAt }

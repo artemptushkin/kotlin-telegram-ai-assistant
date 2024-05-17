@@ -1,7 +1,7 @@
 package io.github.artemptushkin.ai.assistants.http
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.slf4j.LoggerFactory
@@ -10,9 +10,9 @@ class HttpRequestFunction(
     private val objectMapper: ObjectMapper,
     private val hostToHttpClients: Map<String, OpenAiHttpClient>
 ): OpenAiFunction {
-    override fun handle(from: String): String {
+    override fun handle(from: JsonNode): String {
         logger.debug("Proceeding with the proposed HTTP request request: $from")
-        val apiRequest = objectMapper.readValue<ApiRequest>(from)
+        val apiRequest = objectMapper.treeToValue(from, ApiRequest::class.java)
         val httpUrl = apiRequest.url.toHttpUrl()
         val httpRequestFunction = hostToHttpClients[httpUrl.host] ?: throw IllegalStateException("I'm not allowed to request this server")
         return httpRequestFunction.execute(apiRequest)
@@ -21,6 +21,6 @@ class HttpRequestFunction(
     override fun name(): String = "http-request"
 
     companion object {
-        val logger = LoggerFactory.getLogger(OpenAiHttpClient::class.java)!!
+        val logger = LoggerFactory.getLogger(HttpRequestFunction::class.java)!!
     }
 }

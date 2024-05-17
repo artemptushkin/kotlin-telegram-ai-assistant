@@ -9,11 +9,11 @@ import com.github.kotlintelegrambot.entities.ChatAction
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
-import com.theokanning.openai.messages.MessageRequest
-import com.theokanning.openai.runs.Run
+import com.theokanning.openai.assistants.message.MessageRequest
+import com.theokanning.openai.assistants.run.Run
+import com.theokanning.openai.assistants.thread.Thread
+import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
-import com.theokanning.openai.threads.Thread
-import com.theokanning.openai.threads.ThreadRequest
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
