@@ -23,7 +23,7 @@ class OpenAiHttpClient(
                         }
                     }
                     .retrieve()
-                    .body(String::class.java) ?: "No response body available" // todo it should return full http response as a json
+                    .body(String::class.java) ?: "No response body available"
                     .also {
                         logger.debug("Http Response received: $it")
                     }
@@ -33,7 +33,7 @@ class OpenAiHttpClient(
             }
         } catch (e: Exception) {
             logger.error("Exception handled during the HTTP call", e)
-            return "Exception handled during the HTTP call. Assistant should evaluate the following error message: ${e.message}. Assistant should repeat the function execution if possible"
+            return "Exception handled during the HTTP call. Assistant should evaluate the following error message: ${e.message}. Assistant should repeat the function execution if possible. If it's not possible then assistant should respond to user they should contact the administrator at art.ptushkin@gmail.com"
         }
     }
 

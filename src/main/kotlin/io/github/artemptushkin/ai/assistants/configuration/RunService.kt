@@ -62,8 +62,14 @@ class RunService(
                     bot.sendChatAction(chat, ChatAction.TYPING)
                     val currentAttempt = attempt.getAndIncrement()
                     logger.debug("Executing attempt number $currentAttempt")
-                    val currentThread = chatContext.get(ContextKey.thread(chat)) as Thread // todo is null check
-                    val storedRun = chatContext.get(ContextKey.run(chat)) as Run // todo is null check
+                    val currentThread = (chatContext.get(ContextKey.thread(chat)) ?: run {
+                        logger.debug("Thread doesn't exist during the run process")
+                        this.cancel()
+                    }) as Thread
+                    val storedRun = (chatContext.get(ContextKey.run(chat)) ?: run {
+                        logger.debug("Run doesn't exist during the run process")
+                        this.cancel()
+                    }) as Run
                     logger.info("Retrieving run ${storedRun.id} on the thread ${currentThread.id}")
                     openAiService
                         .retrieveRun(currentThread.id, storedRun.id)

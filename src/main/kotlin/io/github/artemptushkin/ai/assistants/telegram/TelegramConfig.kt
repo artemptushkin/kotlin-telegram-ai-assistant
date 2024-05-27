@@ -19,8 +19,8 @@ import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
+import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
 import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
-import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
@@ -72,12 +72,16 @@ class TelegramConfiguration(
                 }
             }
             dispatch {
+                command("help") {
+                    val chat = this.message.chatId()
+                    bot.sendMessage(chat, telegramProperties.bot.helpMessage)
+                }
                 command("start") {
-                    val chat = this.message.chat.id.toChat()
+                    val chat = this.message.chatId()
                     bot.sendMessage(chat, "I'm happy to assist you, please type your prompt")
                 }
                 command("currentThread") {
-                    val chat = this.message.chat.id.toChat()
+                    val chat = this.message.chatId()
                     val thread = chatContext.get(thread(chat))
                     if (thread == null) {
                         bot.sendMessage(chat, "No current thread, create one with /thread")
@@ -87,14 +91,14 @@ class TelegramConfiguration(
                     }
                 }
                 command("thread") {
-                    val chat = this.message.chat.id.toChat()
+                    val chat = this.message.chatId()
                     val thread = openAiService.createThread(ThreadRequest())
                     chatContext.save(thread(chat), thread)
                     logger.debug("Thread has been created ${thread.id}")
                     bot.sendMessage(chat, "Thread has been created ${thread.id}")
                 }
                 command("reset") {
-                    val chat = this.message.chat.id.toChat()
+                    val chat = this.message.chatId()
                     val thread = chatContext.get(thread(chat))
                     if (thread == null) {
                         bot.sendMessage(chat, "No current thread, create one with /thread")
@@ -112,7 +116,7 @@ class TelegramConfiguration(
                     runService.createAndRun(bot, message)
                 }
                 message {
-                    val chat = this.message.chat.id.toChat()
+                    val chat = this.message.chatId()
                     if (message.text != null && !message.isCommand()) {
                         val thread = chatContext.get(thread(chat))
                         bot.sendChatAction(chat, ChatAction.TYPING)
