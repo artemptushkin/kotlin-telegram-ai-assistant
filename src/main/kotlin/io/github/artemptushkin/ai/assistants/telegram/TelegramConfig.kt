@@ -67,8 +67,8 @@ class TelegramConfiguration(
             coroutineDispatcher = dispatcher
             if (environment.acceptsProfiles(Profiles.of("webhook"))) {
                 webhook {
-                    url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined")
-                    token = telegramProperties.webhook.token ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
+                    url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
+                    secretToken = telegramProperties.webhook.secretToken ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
                     allowedUpdates = listOf("message")
                 }
             }
@@ -204,7 +204,7 @@ data class TelegramProperties(
 
 data class WebHookProperties(
     val url: String? = null,
-    val token: String? = null
+    val secretToken: String? = null
 )
 
 data class BotProperties(
