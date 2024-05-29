@@ -12,7 +12,7 @@ class HttpRequestFunction(
 ): OpenAiFunction {
     override fun handle(from: JsonNode): String {
         logger.debug("Proceeding with the proposed HTTP request request: $from")
-        val apiRequest = objectMapper.treeToValue(from, ApiRequest::class.java)
+        val apiRequest = objectMapper.treeToValue(from, ApiRequest::class.java) // todo handle exception here
         val httpUrl = apiRequest.url.toHttpUrl()
         val httpRequestFunction = hostToHttpClients[httpUrl.host] ?: throw IllegalStateException("I'm not allowed to request this server")
         return httpRequestFunction.execute(apiRequest)

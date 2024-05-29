@@ -7,7 +7,7 @@ import java.net.URL
 data class ApiRequest(
     val url: String,
     val method: String,
-    val queries: String?,
+    val queries: String?, // todo sometimes it sends array here ["symbol=BTC","CMC_PRO_API_KEY=<your_access_token>"]
     val headers: List<String>?
 )
 
