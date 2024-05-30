@@ -62,7 +62,7 @@ class TelegramConfiguration(
         val runService = RunService(openAiService, chatContext, telegramProperties, openAiFunctions, runsServiceDispatcher())
         val dispatcher = botCoroutineDispatcher()
         return bot {
-            logLevel = LogLevel.Error
+            logLevel = LogLevel.All()
             token = telegramProperties.bot.token
             coroutineDispatcher = dispatcher
             if (environment.acceptsProfiles(Profiles.of("webhook"))) {
