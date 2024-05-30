@@ -1,13 +1,10 @@
 package io.github.artemptushkin.ai.assistants
 
 import com.github.kotlintelegrambot.Bot
-import io.github.artemptushkin.ai.assistants.telegram.TelegramConfiguration
 import jakarta.annotation.PreDestroy
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
-import org.springframework.context.ApplicationListener
-import org.springframework.context.event.ContextClosedEvent
 import org.springframework.stereotype.Component
 
 @SpringBootApplication
@@ -26,6 +23,7 @@ class ShutdownTelegramListener(
     fun onShutdown() {
         logger.warn("I remind telegram about the webhook so it keeps calling the webhook even if the response time was slow")
         bot.getWebhookInfo()
+        logger.warn("telegram getWebhookInfo has been called")
     }
 
     companion object {
