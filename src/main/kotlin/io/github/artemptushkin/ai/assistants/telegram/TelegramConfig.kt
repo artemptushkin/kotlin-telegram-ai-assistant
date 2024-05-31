@@ -49,7 +49,6 @@ class TelegramConfiguration(
     private val chatContext: ChatContext,
     private val environment: Environment
 ) {
-
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
 
@@ -70,6 +69,7 @@ class TelegramConfiguration(
                     url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
                     secretToken = telegramProperties.webhook.secretToken ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
                     allowedUpdates = listOf("message")
+                    ipAddress = "35.210.11.247"
                 }
             }
             dispatch {
