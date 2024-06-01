@@ -21,9 +21,9 @@ class ShutdownTelegramListener(
 
     @PreDestroy
     fun onShutdown() {
-        logger.warn("I remind telegram about the webhook so it keeps calling the webhook even if the response time was slow")
-        bot.getWebhookInfo()
-        logger.warn("telegram getWebhookInfo has been called")
+   //     logger.warn("I remind telegram about the webhook so it keeps calling the webhook even if the response time was slow")
+   //     bot.getWebhookInfo()
+   //     logger.warn("telegram getWebhookInfo has been called")
     }
 
     companion object {
