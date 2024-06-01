@@ -9,7 +9,6 @@ import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.scheduling.annotation.Scheduled
 
 @Configuration
 @EnableScheduling
@@ -19,7 +18,7 @@ class SetWhConfig(
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
 
-    @Scheduled(fixedRate = 5 * 60 * 1000L) // 5 minutes in milliseconds
+   // @Scheduled(fixedRate = 5 * 60 * 1000L) // 5 minutes in milliseconds
     fun scheduleTaskWithCoroutine() {
         scope.launch {
             logger.info("Running set wh task")
