@@ -38,4 +38,4 @@ out/
 **/application-secret.yml
 **/application-local.yml
 app.yaml
-bot/config/application-prod.yaml
+config/application-prod.yaml

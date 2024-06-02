@@ -15,7 +15,7 @@ class SetWebhookPubsubFunction : BackgroundFunction<PubsubMessage> {
     private val url = "https://api.telegram.org/bot${System.getenv("BOT_TOKEN")}/getWebhookInfo"
     private val jsonPayload = """
         {
-            "url": "https://ai-telegram-assistants-zsjwo2lwrq-ew.a.run.app",
+            "url": "https://ai-telegram-assistants-zsjwo2lwrq-ew.a.run.app/telegram/webhook",
             "secret_token": "${System.getenv("WEBHOOK_TOKEN")}",
             "allowed_updates": ["message"],
             "max_connections": 80

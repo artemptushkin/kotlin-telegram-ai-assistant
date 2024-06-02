@@ -69,7 +69,7 @@ class TelegramConfiguration(
                     url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
                     secretToken = telegramProperties.webhook.secretToken ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
                     allowedUpdates = listOf("message")
-                    maxConnections = 40
+                    maxConnections = 80
                 }
             }
             dispatch {
