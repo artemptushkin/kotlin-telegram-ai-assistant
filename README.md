@@ -6,7 +6,7 @@ The bot can make any arbitrary call to any HTTP server using the natural languag
 
 Telegram is being used as an advanced chat platform.
 
-You can find in the codebase that it contains all the [HTTP client configuration](src/main/kotlin/io/github/artemptushkin/ai/assistants/gitlab/GitlabConfig.kt) to make it possible to integrate with, for example, Gitlab API.
+You can find in the codebase that it contains all the [HTTP client configuration](bot/src/main/kotlin/io/github/artemptushkin/ai/assistants/gitlab/GitlabConfig.kt) to make it possible to integrate with, for example, Gitlab API.
 
 All the HTTP request details as resolved by the OpenAI LLM and this server (bot) just executes anything it gets from the assistant. It's not needed to map the natural language with a given request - ChatGPT does it for you.
 

@@ -61,7 +61,7 @@ class TelegramConfiguration(
         val runService = RunService(openAiService, chatContext, telegramProperties, openAiFunctions, runsServiceDispatcher())
         val dispatcher = botCoroutineDispatcher()
         return bot {
-            logLevel = LogLevel.All()
+            logLevel = LogLevel.Error
             token = telegramProperties.bot.token
             coroutineDispatcher = dispatcher
             if (environment.acceptsProfiles(Profiles.of("webhook"))) {
@@ -69,7 +69,7 @@ class TelegramConfiguration(
                     url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
                     secretToken = telegramProperties.webhook.secretToken ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
                     allowedUpdates = listOf("message")
-                    maxConnections = 1
+                    maxConnections = 40
                 }
             }
             dispatch {
