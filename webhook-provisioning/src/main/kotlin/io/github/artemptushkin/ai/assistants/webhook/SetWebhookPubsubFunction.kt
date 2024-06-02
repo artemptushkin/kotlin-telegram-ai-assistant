@@ -12,7 +12,7 @@ import java.util.logging.Logger
 class SetWebhookPubsubFunction : BackgroundFunction<PubsubMessage> {
 
     private val client: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build()
-    private val url = "https://api.telegram.org/bot${System.getenv("BOT_TOKEN")}/getWebhookInfo"
+    private val url = "https://api.telegram.org/bot${System.getenv("BOT_TOKEN")}/setWebhook"
     private val jsonPayload = """
         {
             "url": "https://ai-telegram-assistants-zsjwo2lwrq-ew.a.run.app/telegram/webhook",
