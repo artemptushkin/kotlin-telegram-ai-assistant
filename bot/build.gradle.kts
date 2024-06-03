@@ -26,7 +26,7 @@ dependencies {
     )
     implementation("com.google.cloud:spring-cloud-gcp-starter-logging")
 
-    implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.2")
+    implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.3")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.github.lambdua:service:0.20.7")
