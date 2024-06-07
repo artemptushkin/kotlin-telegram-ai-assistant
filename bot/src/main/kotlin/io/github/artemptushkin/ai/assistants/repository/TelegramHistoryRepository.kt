@@ -28,7 +28,7 @@ class DatabaseUpdatesListener(
 ) {
     fun listen() = CoroutineScope(Dispatchers.IO).launch {
         val update = databaseUpdateChannel.receive()
-        telegramHistoryRepository.save(ChatHistory(update.message?.chatId()?.id))
+        telegramHistoryRepository.save(ChatHistory(update.message?.chatId()?.id.toString()))
     }
 
     companion object {
@@ -42,7 +42,7 @@ interface TelegramHistoryRepository : FirestoreReactiveRepository<ChatHistory>
 @Document(collectionName = "telegram-history")
 data class ChatHistory(
     @DocumentId
-    var id: Long? = null,
+    var id: String? = null,
     var messages: List<Message>? = null,
 )
 
