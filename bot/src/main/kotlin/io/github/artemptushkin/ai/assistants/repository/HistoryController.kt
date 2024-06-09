@@ -20,9 +20,9 @@ class HistoryController(
     @PostMapping
     suspend fun save(): ChatHistory = telegramHistoryRepository.save(
         ChatHistory(
-            "2", listOf(
+            "2", mutableListOf(
                 Message(
-                    1, "first", User(
+                    1, "first", 123, User(
                         1, "John"
                     )
                 )

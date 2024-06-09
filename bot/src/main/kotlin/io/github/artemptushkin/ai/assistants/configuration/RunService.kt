@@ -11,6 +11,7 @@ import com.theokanning.openai.assistants.run.SubmitToolOutputRequestItem
 import com.theokanning.openai.assistants.run.SubmitToolOutputsRequest
 import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.service.OpenAiService
+import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
 import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
@@ -25,6 +26,7 @@ class RunService(
     private val chatContext: ChatContext,
     private val telegramProperties: TelegramProperties,
     private val openAiFunctions: Map<String, OpenAiFunction>,
+    private val historyService: TelegramHistoryService,
     runsServiceDispatcher: CoroutineDispatcher,
 ) {
 
@@ -84,7 +86,11 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            val sendMessageResult = bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            launch {
+                                                logger.debug("Saving assistant message")
+                                                historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
+                                            }
                                         }
                                         .also { this.cancel() }
                                 }
@@ -98,7 +104,11 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            val sendMessageResult = bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            launch {
+                                                logger.debug("Saving assistant message")
+                                                historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
+                                            }
                                         }
                                         .also { this.cancel() }
                                 }

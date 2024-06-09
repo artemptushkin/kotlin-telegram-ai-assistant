@@ -16,6 +16,9 @@ import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
+import io.github.artemptushkin.ai.assistants.repository.Message
+import io.github.artemptushkin.ai.assistants.repository.TelegramHistoryRepository
+import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
@@ -23,6 +26,7 @@ import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
 import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -47,7 +51,9 @@ fun openAiRunsListenerDispatcher(): CoroutineDispatcher = Executors.newFixedThre
 class TelegramConfiguration(
     private val telegramProperties: TelegramProperties,
     private val chatContext: ChatContext,
-    private val environment: Environment
+    private val environment: Environment,
+    private val historyRepository: TelegramHistoryRepository,
+    private val historyService: TelegramHistoryService,
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -58,7 +64,15 @@ class TelegramConfiguration(
         @Qualifier("openAiFunctions")
         openAiFunctions: Map<String, OpenAiFunction>,
     ): Bot {
-        val runService = RunService(openAiService, chatContext, telegramProperties, openAiFunctions, runsServiceDispatcher())
+        val runService =
+            RunService(
+                openAiService,
+                chatContext,
+                telegramProperties,
+                openAiFunctions,
+                historyService,
+                runsServiceDispatcher()
+            )
         val dispatcher = botCoroutineDispatcher()
         return bot {
             logLevel = LogLevel.Error
@@ -66,8 +80,10 @@ class TelegramConfiguration(
             coroutineDispatcher = dispatcher
             if (environment.acceptsProfiles(Profiles.of("webhook"))) {
                 webhook {
-                    url = telegramProperties.webhook.url ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
-                    secretToken = telegramProperties.webhook.secretToken ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
+                    url = telegramProperties.webhook.url
+                        ?: throw IllegalStateException("telegramProperties.webhook.url is not defined") // to set secret token
+                    secretToken = telegramProperties.webhook.secretToken
+                        ?: throw IllegalStateException("telegramProperties.webhook.token is not defined")
                     allowedUpdates = listOf("message")
                     maxConnections = 80
                     createOnStart = false
@@ -120,24 +136,33 @@ class TelegramConfiguration(
                     runService.createAndRun(bot, message)
                 }
                 message {
+                    if (!environment.acceptsProfiles(Profiles.of("webhook"))) {
+                        logger.debug("Polling is enabled, we save the message before processing it to preserve the chat history")
+                        historyService.saveOrAddMessage(this.message)
+                    }
                     val chat = this.message.chatId()
                     if (message.text != null && !message.isCommand()) {
                         val thread = chatContext.get(thread(chat))
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         if (thread == null) {
-                            logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id}")
+                            logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
+                            val messagesToBeSaved = historyRepository
+                                .findById(chat.id.toString())
+                                .awaitSingleOrNull()?.let {
+                                    val savedMessages = it.messages
+                                    populateCurrentMessageIfNotExists(savedMessages, this.message)
+                                    return@let savedMessages
+                                }
+                                ?.map { it.toMessageRequest() } ?: listOf(
+                                MessageRequest.builder()
+                                    .role("user")
+                                    .content(this.message.text!!)
+                                    .build()
+                            )
                             val newThread = openAiService.createThread(
                                 ThreadRequest
                                     .builder()
-                                    .messages(
-                                        listOf(
-                                            MessageRequest
-                                                .builder()
-                                                .role("user")
-                                                .content(this.message.text!!)
-                                                .build()
-                                        )
-                                    )
+                                    .messages(messagesToBeSaved)
                                     .build()
                             )
                             logger.debug("Thread created")
@@ -178,7 +203,10 @@ class TelegramConfiguration(
                             runService.createAndRun(bot, message)
                         } catch (e: Exception) {
                             logger.error(e.message, e)
-                            bot.sendMessage(chat, "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant.")
+                            bot.sendMessage(
+                                chat,
+                                "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
+                            )
                         }
                     }
                 }
@@ -191,6 +219,15 @@ class TelegramConfiguration(
                 logger.info("Starting telegram polling...")
                 this.startPolling()
             }
+        }
+    }
+
+    private fun populateCurrentMessageIfNotExists(
+        savedMessages: MutableList<Message>?,
+        message: com.github.kotlintelegrambot.entities.Message
+    ) {
+        if (savedMessages != null && savedMessages.none { it.id == message.messageId }) {
+            savedMessages.add(message.toMessage())
         }
     }
 
