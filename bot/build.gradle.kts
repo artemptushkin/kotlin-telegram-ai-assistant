@@ -24,9 +24,13 @@ dependencies {
     implementation(
         platform("com.google.cloud:spring-cloud-gcp-dependencies:5.3.0")
     )
+    implementation(
+        platform("com.google.cloud:libraries-bom:26.40.0")
+    )
     implementation("com.google.cloud:spring-cloud-gcp-starter-logging")
+    implementation("com.google.cloud:spring-cloud-gcp-starter-data-firestore")
 
-    implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.3")
+    implementation("io.github.artemptushkin:kotlin-telegram-bot:6.1.4")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.github.lambdua:service:0.20.7")
@@ -37,6 +41,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }

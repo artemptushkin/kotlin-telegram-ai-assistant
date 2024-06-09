@@ -7,6 +7,8 @@ spring:
       # https://github.com/GoogleCloudPlatform/spring-cloud-gcp/blob/main/docs/src/main/asciidoc/trace.adoc
       trace:
         enabled: true
+      firestore:
+        database-id: ai-telegram-assistants
 management:
   tracing:
     enabled: true
