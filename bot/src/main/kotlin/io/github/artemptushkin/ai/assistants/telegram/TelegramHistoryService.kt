@@ -29,4 +29,13 @@ class TelegramHistoryService(
                 )
                 .awaitSingle()
     }
+
+    suspend fun clearHistoryById(id: String) {
+         historyRepository
+            .findById(id)
+            .flatMap { c ->
+                c.messages?.clear()
+                historyRepository.save(c)
+            }.awaitSingle()
+    }
 }

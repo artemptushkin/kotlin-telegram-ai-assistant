@@ -124,12 +124,14 @@ class TelegramConfiguration(
                     } else {
                         thread as Thread
                         chatContext.get(ContextKey.run(chat))?.let {
+                            logger.debug("Cancelling the run")
                             openAiService.cancelRun(thread.id, (it as Run).id)
                             chatContext.delete(ContextKey.run(chat))
                         }
                         openAiService.deleteThread(thread.id)
                         chatContext.delete(thread(chat))
-                        logger.debug("Thread has been deleted ${thread.id}")
+                        historyService.clearHistoryById(chat.id.toString())
+                        logger.debug("Thread has been deleted ${thread.id} and the history is cleared")
                         bot.sendMessage(chat, "Thread has been deleted ${thread.id}")
                     }
                 }
