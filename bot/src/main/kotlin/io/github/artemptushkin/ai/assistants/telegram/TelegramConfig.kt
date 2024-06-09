@@ -10,7 +10,6 @@ import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
-import com.theokanning.openai.assistants.run.Run
 import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
@@ -124,8 +123,14 @@ class TelegramConfiguration(
                     } else {
                         thread as Thread
                         chatContext.get(ContextKey.run(chat))?.let {
-                            logger.debug("Cancelling the run")
-                            openAiService.cancelRun(thread.id, (it as Run).id)
+                            openAiService
+                                .listRuns(thread.id, ListSearchParameters())
+                                .getData()
+                                .filter { it.status == "queued" }
+                                .forEach {
+                                    logger.warn("Cancelling the queued run ${it.id}")
+                                    openAiService.cancelRun(thread.id, it.id)
+                                }
                             chatContext.delete(ContextKey.run(chat))
                         }
                         openAiService.deleteThread(thread.id)
