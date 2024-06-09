@@ -21,7 +21,7 @@ class HistoryController(
     suspend fun save(): ChatHistory = telegramHistoryRepository.save(
         ChatHistory(
             "2", mutableListOf(
-                Message(
+                ChatMessage(
                     1, "first", 123, User(
                         1, "John"
                     )

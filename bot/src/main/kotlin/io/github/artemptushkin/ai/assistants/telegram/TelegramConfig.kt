@@ -6,19 +6,20 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatAction
+import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
-import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.assistants.run.Run
 import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
-import io.github.artemptushkin.ai.assistants.repository.Message
+import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.TelegramHistoryRepository
 import io.github.artemptushkin.ai.assistants.repository.toMessage
+import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
@@ -149,16 +150,9 @@ class TelegramConfiguration(
                             val messagesToBeSaved = historyRepository
                                 .findById(chat.id.toString())
                                 .awaitSingleOrNull()?.let {
-                                    val savedMessages = it.messages
-                                    populateCurrentMessageIfNotExists(savedMessages, this.message)
-                                    return@let savedMessages
+                                    populateCurrentMessageIfNotExists(it.messages, this.message)
                                 }
-                                ?.map { it.toMessageRequest() } ?: listOf(
-                                MessageRequest.builder()
-                                    .role("user")
-                                    .content(this.message.text!!)
-                                    .build()
-                            )
+                                ?.map { it.toMessageRequest() } ?: listOf(this.message.toMessageRequest("user"))
                             val newThread = openAiService.createThread(
                                 ThreadRequest
                                     .builder()
@@ -172,11 +166,7 @@ class TelegramConfiguration(
                             logger.debug("Creating a new message on the thread ${thread.id}")
                             try {
                                 val openAiMessage = openAiService.createMessage(
-                                    thread.id, MessageRequest
-                                        .builder()
-                                        .role("user")
-                                        .content(this.message.text!!)
-                                        .build()
+                                    thread.id, this.message.toMessageRequest("user")
                                 )
                                 logger.debug("Open AI message created: ${openAiMessage.id}")
                             } catch (e: Exception) {
@@ -190,11 +180,7 @@ class TelegramConfiguration(
                                         openAiService.cancelRun(thread.id, it.id)
                                     }
                                 val openAiMessage = openAiService.createMessage(
-                                    thread.id, MessageRequest
-                                        .builder()
-                                        .role("user")
-                                        .content(this.message.text!!)
-                                        .build()
+                                    thread.id, this.message.toMessageRequest("user")
                                 )
                                 logger.debug("Open AI message created after the previous run cancellation, messageid: ${openAiMessage.id}")
                             }
@@ -223,12 +209,13 @@ class TelegramConfiguration(
     }
 
     private fun populateCurrentMessageIfNotExists(
-        savedMessages: MutableList<Message>?,
-        message: com.github.kotlintelegrambot.entities.Message
-    ) {
+        savedMessages: MutableList<ChatMessage>?,
+        message: Message
+    ): MutableList<ChatMessage>? {
         if (savedMessages != null && savedMessages.none { it.id == message.messageId }) {
             savedMessages.add(message.toMessage())
         }
+        return savedMessages
     }
 
     companion object {
