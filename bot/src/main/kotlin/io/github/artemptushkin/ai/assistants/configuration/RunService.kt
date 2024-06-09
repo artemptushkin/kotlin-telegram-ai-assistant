@@ -86,11 +86,10 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            val sendMessageResult = bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
-                                            launch {
-                                                logger.debug("Saving assistant message")
-                                                historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
-                                            }
+                                            val sendMessageResult =
+                                                bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            logger.debug("Saving assistant message")
+                                            historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
                                         }
                                         .also { this.cancel() }
                                 }
@@ -104,11 +103,10 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            val sendMessageResult = bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
-                                            launch {
-                                                logger.debug("Saving assistant message")
-                                                historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
-                                            }
+                                            val sendMessageResult =
+                                                bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            logger.debug("Saving assistant message")
+                                            historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
                                         }
                                         .also { this.cancel() }
                                 }
