@@ -80,8 +80,7 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            val sendMessageResult =
-                                                bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
+                                            val sendMessageResult = bot.sendMessage(chat, it)
                                             logger.debug("Saving assistant message")
                                             historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
                                         }
