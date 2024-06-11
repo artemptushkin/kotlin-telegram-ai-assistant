@@ -12,10 +12,10 @@ import java.util.logging.Logger
 class SetWebhookPubsubFunction : BackgroundFunction<PubsubMessage> {
 
     private val client: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build()
-    private val url = "https://api.telegram.org/bot${System.getenv("BOT_TOKEN")}/setWebhook"
+    private val url = "https://api.telegram.org/bot${System.getenv("TELEGRAM_BOT_TOKEN")}/setWebhook"
     private val jsonPayload = """
         {
-            "url": "https://ai-telegram-assistants-zsjwo2lwrq-ew.a.run.app/telegram/webhook",
+            "url": "${System.getenv("TELEGRAM_WEBHOOK_URL")}",
             "secret_token": "${System.getenv("WEBHOOK_TOKEN")}",
             "allowed_updates": ["message"],
             "max_connections": 80
