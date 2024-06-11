@@ -10,7 +10,6 @@ import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
-import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
@@ -21,7 +20,6 @@ import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
-import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey.Companion.thread
 import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
 import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
 import kotlinx.coroutines.CoroutineDispatcher
@@ -100,43 +98,44 @@ class TelegramConfiguration(
                 }
                 command("currentThread") {
                     val chat = this.message.chatId()
-                    val thread = chatContext.get(thread(chat))
-                    if (thread == null) {
+                    val threadId = historyService.fetchCurrentThread(chat.id.toString())
+                    if (threadId == null) {
                         bot.sendMessage(chat, "No current thread, create one with /thread")
                     } else {
-                        thread as Thread
-                        bot.sendMessage(chat, "Current thread is: ${thread.id}")
+                        bot.sendMessage(chat, "Current thread is: $threadId")
                     }
                 }
                 command("thread") {
                     val chat = this.message.chatId()
                     val thread = openAiService.createThread(ThreadRequest())
-                    chatContext.save(thread(chat), thread)
+                    historyService.saveThread(chat.id.toString(), mutableListOf(), thread)
                     logger.debug("Thread has been created ${thread.id}")
                     bot.sendMessage(chat, "Thread has been created ${thread.id}")
                 }
                 command("reset") {
                     val chat = this.message.chatId()
-                    val thread = chatContext.get(thread(chat))
-                    if (thread == null) {
+                    val threadId = historyService.fetchCurrentThread(chat.id.toString())
+                    if (threadId == null) {
                         bot.sendMessage(chat, "No current thread, create one with /thread")
                     } else {
-                        thread as Thread
                         chatContext.get(ContextKey.run(chat))?.let {
-                            openAiService
-                                .listRuns(thread.id, ListSearchParameters())
-                                .getData()
-                                .filter { it.status == "queued" }
-                                .forEach {
-                                    logger.warn("Cancelling the queued run ${it.id}")
-                                    openAiService.cancelRun(thread.id, it.id)
-                                }
-                            chatContext.delete(ContextKey.run(chat))
+                            try {
+                                openAiService
+                                    .listRuns(threadId, ListSearchParameters())
+                                    .getData()
+                                    .filter { it.status == "queued" }
+                                    .forEach {
+                                        logger.warn("Cancelling the queued run ${it.id}")
+                                        openAiService.cancelRun(threadId, it.id)
+                                    }
+                                chatContext.delete(ContextKey.run(chat))
+                            } catch (e: Exception) {
+                                logger.error(e.message, e)
+                            }
                         }
-                        openAiService.deleteThread(thread.id)
-                        chatContext.delete(thread(chat))
-                        logger.debug("Thread has been deleted ${thread.id}")
-                        bot.sendMessage(chat, "Thread has been deleted ${thread.id}")
+                        openAiService.deleteThread(threadId)
+                        logger.debug("Thread has been deleted $threadId")
+                        bot.sendMessage(chat, "Thread has been deleted $threadId")
                     }
                     historyService.clearHistoryById(chat.id.toString())
                     logger.debug("Thread history has been cleared ${chat.id}")
@@ -151,44 +150,56 @@ class TelegramConfiguration(
                     }
                     val chat = this.message.chatId()
                     if (message.text != null && !message.isCommand()) {
-                        val thread = chatContext.get(thread(chat))
+                        val chatHistory = historyService.fetchChatHistory(chat.id.toString())
                         bot.sendChatAction(chat, ChatAction.TYPING)
-                        if (thread == null) {
-                            logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
-                            val messagesToBeSaved = historyRepository
-                                .findById(chat.id.toString())
-                                .awaitSingleOrNull()?.let {
-                                    populateCurrentMessageIfNotExists(it.messages, this.message)
-                                }
-                                ?.map { it.toMessageRequest() } ?: listOf(this.message.toMessageRequest("user"))
-                            val newThread = openAiService.createThread(
-                                ThreadRequest
-                                    .builder()
-                                    .messages(messagesToBeSaved)
-                                    .build()
-                            )
-                            logger.debug("Thread created")
-                            chatContext.save(thread(chat), newThread) // todo make it common with another command
+                        val threadId = chatHistory?.threadId
+                        if (threadId == null) {
+                            if (chatHistory == null) {
+                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} using current message as initial history")
+                                val newThread = openAiService.createThread(
+                                    ThreadRequest
+                                        .builder()
+                                        .messages(listOf(this.message.toMessageRequest("user")))
+                                        .build()
+                                )
+                                historyService.saveThread(chat.id.toString(), mutableListOf(this.message to "user"), newThread)
+                                logger.debug("Thread created")
+                            } else {
+                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
+                                val messagesToBeSaved = historyRepository
+                                    .findById(chat.id.toString())
+                                    .awaitSingleOrNull()?.let {
+                                        populateCurrentMessageIfNotExists(it.messages, this.message)
+                                    }
+                                    ?.map { it.toMessageRequest() }
+                                val newThread = openAiService.createThread(
+                                    ThreadRequest
+                                        .builder()
+                                        .messages(messagesToBeSaved)
+                                        .build()
+                                )
+                                historyService.saveThread(chatHistory, newThread)
+                                logger.debug("Thread created")
+                            }
                         } else {
-                            thread as Thread
-                            logger.debug("Creating a new message on the thread ${thread.id}")
+                            logger.debug("Creating a new message on the existent thread $threadId")
                             try {
                                 val openAiMessage = openAiService.createMessage(
-                                    thread.id, this.message.toMessageRequest("user")
+                                    threadId, this.message.toMessageRequest("user")
                                 )
                                 logger.debug("Open AI message created: ${openAiMessage.id}")
                             } catch (e: Exception) {
                                 logger.error("Handled exception during the create message processing: ${e.message}")
                                 openAiService
-                                    .listRuns(thread.id, ListSearchParameters())
+                                    .listRuns(threadId, ListSearchParameters())
                                     .getData()
                                     .filter { it.status == "queued" }
                                     .forEach {
                                         logger.warn("Cancelling the queued run ${it.id} as another message is coming")
-                                        openAiService.cancelRun(thread.id, it.id)
+                                        openAiService.cancelRun(threadId, it.id)
                                     }
                                 val openAiMessage = openAiService.createMessage(
-                                    thread.id, this.message.toMessageRequest("user")
+                                    threadId, this.message.toMessageRequest("user")
                                 )
                                 logger.debug("Open AI message created after the previous run cancellation, messageid: ${openAiMessage.id}")
                             }

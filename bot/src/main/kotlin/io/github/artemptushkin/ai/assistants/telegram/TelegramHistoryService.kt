@@ -1,6 +1,7 @@
 package io.github.artemptushkin.ai.assistants.telegram
 
 import com.github.kotlintelegrambot.entities.Message
+import com.theokanning.openai.assistants.thread.Thread
 import io.github.artemptushkin.ai.assistants.repository.ChatHistory
 import io.github.artemptushkin.ai.assistants.repository.TelegramHistoryRepository
 import io.github.artemptushkin.ai.assistants.repository.toMessage
@@ -35,7 +36,35 @@ class TelegramHistoryService(
             .findById(id)
             .flatMap { c ->
                 c.messages?.clear()
+                c.threadId = null
                 historyRepository.save(c)
             }.awaitSingle()
+    }
+
+    suspend fun saveThread(chatHistory: ChatHistory, thread: Thread): String? {
+        chatHistory.threadId = thread.id
+        return historyRepository
+            .save(chatHistory)
+            .mapNotNull { it.threadId }
+            .awaitSingleOrNull()
+    }
+
+    suspend fun saveThread(chatId: String, messages: MutableList<Pair<Message, String>>, thread: Thread): String? {
+        return historyRepository
+            .save(ChatHistory(id = chatId, threadId = thread.id, messages = messages.map { it.first.toMessage(it.second) }.toMutableList()))
+            .mapNotNull { it.threadId }
+            .awaitSingleOrNull()
+    }
+
+    suspend fun fetchCurrentThread(chatId: String): String? {
+        return historyRepository
+            .findById(chatId)
+            .mapNotNull { it.threadId }
+            .awaitSingleOrNull()
+    }
+    suspend fun fetchChatHistory(chatId: String): ChatHistory? {
+        return historyRepository
+            .findById(chatId)
+            .awaitSingleOrNull()
     }
 }

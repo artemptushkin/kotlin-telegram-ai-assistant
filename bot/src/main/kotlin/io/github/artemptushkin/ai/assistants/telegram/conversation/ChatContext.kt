@@ -38,7 +38,6 @@ data class ContextKey<T: Any>(
             "run" to String::class,
             "command" to String::class
         )
-        fun thread(chatId: ChatId.Id) = ContextKey(chatId, "current-thread", "thread", keyToClass["thread"]!!)
 
         fun run(chatId: ChatId.Id) = ContextKey(chatId, "current-run", "thread", keyToClass["run"]!!)
     }

@@ -14,6 +14,7 @@ data class ChatHistory(
     @DocumentId
     var id: String? = null,
     var messages: MutableList<ChatMessage>? = null,
+    var threadId: String? = null,
 ) {
     fun addMessage(tgMessage: Message?, role: String = "user") {
         if (this.messages == null) {

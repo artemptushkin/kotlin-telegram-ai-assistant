@@ -9,7 +9,6 @@ import com.theokanning.openai.assistants.run.Run
 import com.theokanning.openai.assistants.run.RunCreateRequest
 import com.theokanning.openai.assistants.run.SubmitToolOutputRequestItem
 import com.theokanning.openai.assistants.run.SubmitToolOutputsRequest
-import com.theokanning.openai.assistants.thread.Thread
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
 import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
@@ -34,20 +33,19 @@ class RunService(
 
     suspend fun createAndRun(bot: Bot, message: Message) {
         val chat = message.chat.id.toChat()
-        val thread = chatContext.get(ContextKey.thread(chat))
+        val currentThreadId = historyService.fetchCurrentThread(chat.id.toString())
         bot.sendChatAction(chat, ChatAction.TYPING)
-        if (thread == null) {
+        if (currentThreadId == null) {
             bot.sendMessage(chat, "No current thread, create one with /thread")
         } else {
-            thread as Thread
             val run = openAiService.createRun(
-                thread.id, RunCreateRequest
+                currentThreadId, RunCreateRequest
                     .builder()
                     .assistantId(telegramProperties.bot.assistantId)
                     .build()
             ) // todo it can shoot timeout from here
             chatContext.save(ContextKey.run(chat), run)
-            logger.info("Run ${run.id} has been created on the thread ${thread.id}")
+            logger.info("Run ${run.id} has been created on the thread $currentThreadId")
             bot.sendChatAction(chat, ChatAction.TYPING)
         }
         coroutineScope.launch {
@@ -64,23 +62,19 @@ class RunService(
                     bot.sendChatAction(chat, ChatAction.TYPING)
                     val currentAttempt = attempt.getAndIncrement()
                     logger.debug("Executing attempt number $currentAttempt")
-                    val currentThread = (chatContext.get(ContextKey.thread(chat)) ?: run {
-                        logger.debug("Thread doesn't exist during the run process")
-                        this.cancel()
-                    }) as Thread
                     val storedRun = (chatContext.get(ContextKey.run(chat)) ?: run {
                         logger.debug("Run doesn't exist during the run process")
                         this.cancel()
                     }) as Run
-                    logger.info("Retrieving run ${storedRun.id} on the thread ${currentThread.id}")
+                    logger.info("Retrieving run ${storedRun.id} on the thread $currentThreadId")
                     openAiService
-                        .retrieveRun(currentThread.id, storedRun.id)
+                        .retrieveRun(currentThreadId, storedRun.id)
                         .also { run ->
                             logger.info("Received run status: ${run.status}")
                             when (run.status) {
                                 "completed" -> {
                                     openAiService
-                                        .listMessages(currentThread.id, MessageListSearchParameters())
+                                        .listMessages(currentThreadId, MessageListSearchParameters())
                                         .data
                                         .filter { it.runId == run.id }
                                         .flatMap { it.content }
@@ -96,7 +90,7 @@ class RunService(
 
                                 "failed" -> {
                                     openAiService
-                                        .listMessages(currentThread.id, MessageListSearchParameters())
+                                        .listMessages(currentThreadId, MessageListSearchParameters())
                                         .data
                                         .filter { it.runId == run.id }
                                         .sortedBy { it.createdAt }
@@ -126,7 +120,7 @@ class RunService(
                                                     if (it != null) {
                                                         logger.debug("Executing function '${it.name()}'")
                                                         val result = it.handle(rawArgs)
-                                                        logger.info("Submitting tool outputs, thread: ${currentThread.id}, run: ${run.id}")
+                                                        logger.info("Submitting tool outputs, thread: $currentThreadId, run: ${run.id}")
                                                         SubmitToolOutputRequestItem
                                                             .builder()
                                                             .toolCallId(toolCall.id)
@@ -146,7 +140,7 @@ class RunService(
                                         }
                                     }.let {
                                         openAiService.submitToolOutputs(
-                                            currentThread.id, run.id, SubmitToolOutputsRequest
+                                            currentThreadId, run.id, SubmitToolOutputsRequest
                                                 .builder()
                                                 .toolOutputs(it)
                                                 .build()
