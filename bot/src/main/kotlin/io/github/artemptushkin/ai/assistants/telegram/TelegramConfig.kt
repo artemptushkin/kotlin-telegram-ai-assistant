@@ -15,7 +15,6 @@ import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.repository.ChatMessage
-import io.github.artemptushkin.ai.assistants.repository.TelegramHistoryRepository
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
@@ -24,7 +23,6 @@ import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
 import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -50,7 +48,6 @@ class TelegramConfiguration(
     private val telegramProperties: TelegramProperties,
     private val chatContext: ChatContext,
     private val environment: Environment,
-    private val historyRepository: TelegramHistoryRepository,
     private val historyService: TelegramHistoryService,
 ) {
     @Bean
@@ -166,11 +163,7 @@ class TelegramConfiguration(
                                 logger.debug("Thread created")
                             } else {
                                 logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
-                                val messagesToBeSaved = historyRepository
-                                    .findById(chat.id.toString())
-                                    .awaitSingleOrNull()?.let {
-                                        populateCurrentMessageIfNotExists(it.messages, this.message)
-                                    }
+                                val messagesToBeSaved = populateCurrentMessageIfNotExists(chatHistory.messages, this.message)
                                     ?.map { it.toMessageRequest() }
                                 val newThread = openAiService.createThread(
                                     ThreadRequest
