@@ -127,7 +127,7 @@ class TelegramConfiguration(
                                     }
                                 chatContext.delete(ContextKey.run(chat))
                             } catch (e: Exception) {
-                                logger.error(e.message, e)
+                                logger.error("Exception during removal of runs ${e.message}", e)
                             }
                         }
                         openAiService.deleteThread(threadId)
@@ -177,24 +177,20 @@ class TelegramConfiguration(
                         } else {
                             logger.debug("Creating a new message on the existent thread $threadId")
                             try {
+                                openAiService
+                                    .listRuns(threadId, ListSearchParameters())
+                                    .getData()
+                                    .filter { it.status == "queued" || it.status == "in_progress"  || it.status == "requires_action" || it.status == "cancelling" } // todo refactor here
+                                    .forEach {
+                                        logger.warn("Cancelling the active run ${it.id} as another message is coming")
+                                        openAiService.cancelRun(threadId, it.id)
+                                    }
                                 val openAiMessage = openAiService.createMessage(
                                     threadId, this.message.toMessageRequest("user")
                                 )
                                 logger.debug("Open AI message created: ${openAiMessage.id}")
                             } catch (e: Exception) {
                                 logger.error("Handled exception during the create message processing: ${e.message}")
-                                openAiService
-                                    .listRuns(threadId, ListSearchParameters())
-                                    .getData()
-                                    .filter { it.status == "queued" }
-                                    .forEach {
-                                        logger.warn("Cancelling the queued run ${it.id} as another message is coming")
-                                        openAiService.cancelRun(threadId, it.id)
-                                    }
-                                val openAiMessage = openAiService.createMessage(
-                                    threadId, this.message.toMessageRequest("user")
-                                )
-                                logger.debug("Open AI message created after the previous run cancellation, messageid: ${openAiMessage.id}")
                             }
                         }
                         try {

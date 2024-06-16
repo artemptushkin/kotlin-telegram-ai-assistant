@@ -3,7 +3,6 @@ package io.github.artemptushkin.ai.assistants.configuration
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatAction
 import com.github.kotlintelegrambot.entities.Message
-import com.github.kotlintelegrambot.entities.ParseMode
 import com.theokanning.openai.assistants.message.MessageListSearchParameters
 import com.theokanning.openai.assistants.run.Run
 import com.theokanning.openai.assistants.run.RunCreateRequest
@@ -80,9 +79,15 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            val sendMessageResult = bot.sendMessage(chat, it)
-                                            logger.debug("Saving assistant message")
-                                            historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
+                                            it.chunkToTelegramMessageLimits()
+                                                .forEach { message ->
+                                                    val sendMessageResult = bot.sendMessage(chat, message)
+                                                    logger.debug("Saving assistant message")
+                                                    historyService.saveOrAddMessage(
+                                                        sendMessageResult.get(),
+                                                        "assistant"
+                                                    )
+                                                }
                                         }
                                         .also { this.cancel() }
                                 }
@@ -96,10 +101,15 @@ class RunService(
                                         .flatMap { it.content }
                                         .map { it.text.value }
                                         .forEach {
-                                            val sendMessageResult =
-                                                bot.sendMessage(chat, it, parseMode = ParseMode.MARKDOWN)
-                                            logger.debug("Saving assistant message")
-                                            historyService.saveOrAddMessage(sendMessageResult.get(), "assistant")
+                                            it.chunkToTelegramMessageLimits()
+                                                .forEach { message ->
+                                                    val sendMessageResult = bot.sendMessage(chat, message)
+                                                    logger.debug("Saving assistant message")
+                                                    historyService.saveOrAddMessage(
+                                                        sendMessageResult.get(),
+                                                        "assistant"
+                                                    )
+                                                }
                                         }
                                         .also { this.cancel() }
                                 }
@@ -145,6 +155,10 @@ class RunService(
                                                 .build()
                                         )
                                     }
+                                }
+
+                                "cancelled" -> {
+                                    logger.debug("The run ${run.id} has been cancelled for the chat $chat")
                                 }
 
                                 else -> {}
