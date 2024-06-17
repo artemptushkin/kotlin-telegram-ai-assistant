@@ -1,18 +1,19 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "3.2.0"
+    id("org.springframework.boot") version "3.3.0"
+    id("org.springframework.boot.aot") version "3.3.0"
     id("io.spring.dependency-management") version "1.1.4"
     kotlin("jvm") apply true
-    kotlin("plugin.spring") version "1.9.24"
-    id("com.google.cloud.tools.jib") version "3.4.2"
+    kotlin("plugin.spring") version "2.0.0"
+    id("com.google.cloud.tools.jib") version "3.4.3"
 }
 
 group = "io.github.artemptushkin"
 version = "0.0.1-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -49,7 +50,7 @@ dependencies {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "17"
+        jvmTarget = "21"
     }
 }
 
@@ -59,8 +60,11 @@ tasks.withType<Test> {
 
 // https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
 jib {
+    container {
+        jvmFlags = listOf("-Dspring.aot.enabled=true")
+    }
     from {
-        image = "eclipse-temurin:17-jre"
+        image = "eclipse-temurin:21-jre"
     }
     extraDirectories {
         paths {

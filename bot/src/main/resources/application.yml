@@ -24,6 +24,9 @@ spring:
         enabled: false
       trace:
         enabled: true
+  threads:
+    virtual:
+      enabled: true
 management:
   tracing:
     enabled: false
