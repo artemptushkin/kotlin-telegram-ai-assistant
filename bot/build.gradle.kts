@@ -60,10 +60,21 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn("compileAotJava")
+    dependsOn("processAotResources")
+
+    from("build/classes/java/aot")
+    from("build/generated/aotClasses")
+    from("build/resources/aot")
+}
+
 jib {
+    containerizingMode = "packaged"
     container {
-        // https://www.baeldung.com/spring-boot-startup-speed
-        jvmFlags = listOf("-Dspring.aot.enabled=true", "-Xverify:none")
+        jvmFlags = listOf("-Dspring.aot.enabled=true")
+        mainClass = "io.github.artemptushkin.ai.assistants.AiTelegramAssistantsApplicationKt"
     }
     from {
         image = "eclipse-temurin:21-jre"
@@ -81,20 +92,12 @@ jib {
     extraDirectories {
         paths {
             path {
+                setFrom("build/libs/cds")
+                into = "/cds"
+            }
+            path {
                 setFrom("../config")
                 into = "/config"
-            }
-            path {
-                setFrom("build/generated/aotClasses")
-                into = "/app/classes"
-            }
-            path {
-                setFrom("build/classes/java/aot")
-                into = "/app/classes"
-            }
-            path {
-                setFrom("build/generated/aotResources")
-                into = "/app/resources"
             }
         }
     }
