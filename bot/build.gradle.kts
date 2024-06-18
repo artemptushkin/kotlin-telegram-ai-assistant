@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.utils.extendsFrom
 
 plugins {
     id("org.springframework.boot") version "3.3.0"
@@ -58,19 +59,70 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.register("printRuntimeClasspath") {
+    configurations.runtimeClasspath.get().forEach {
+        println(it)
+    }
+    println("aot!!!")
+   configurations.aotRuntimeClasspath.get().forEach {
+        println(it)
+    }
+    println("dirs!!")
+    println(
+        sourceSets.aot.get().output.classesDirs.files.forEach {
+            println(it)
+        }
+    )
+}
+// /app/classes/io/github/artemptushkin/ai/assistants
+sourceSets {
+    main {
+        runtimeClasspath += sourceSets.aot.get().output
+    }
+}
 // https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
+configurations {
+    create("combo") {
+        extendsFrom(runtimeClasspath.get())
+        extendsFrom(aotRuntimeClasspath.get())
+    }
+//    runtimeClasspath.extendsFrom(aotRuntimeClasspath)
+}
 jib {
+    configurationName = "combo"
     container {
         jvmFlags = listOf("-Dspring.aot.enabled=true")
     }
     from {
         image = "eclipse-temurin:21-jre"
+        platforms {
+            platform {
+                os = "linux"
+                architecture = "arm64"
+            }
+            platform {
+                os = "linux"
+                architecture = "amd64"
+            }
+        }
     }
     extraDirectories {
         paths {
             path {
                 setFrom("../config")
                 into = "/config"
+            }
+            path {
+                setFrom("build/generated/aotClasses")
+                into = "/app/classes"
+            }
+            path {
+                setFrom("build/classes/java/aot")
+                into = "/app/classes"
+            }
+            path {
+                setFrom("build/generated/aotResources")
+                into = "/app/resources"
             }
         }
     }
