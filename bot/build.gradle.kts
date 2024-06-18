@@ -59,37 +59,7 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.register("printRuntimeClasspath") {
-    configurations.runtimeClasspath.get().forEach {
-        println(it)
-    }
-    println("aot!!!")
-   configurations.aotRuntimeClasspath.get().forEach {
-        println(it)
-    }
-    println("dirs!!")
-    println(
-        sourceSets.aot.get().output.classesDirs.files.forEach {
-            println(it)
-        }
-    )
-}
-// /app/classes/io/github/artemptushkin/ai/assistants
-sourceSets {
-    main {
-        runtimeClasspath += sourceSets.aot.get().output
-    }
-}
-// https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin
-configurations {
-    create("combo") {
-        extendsFrom(runtimeClasspath.get())
-        extendsFrom(aotRuntimeClasspath.get())
-    }
-//    runtimeClasspath.extendsFrom(aotRuntimeClasspath)
-}
 jib {
-    configurationName = "combo"
     container {
         jvmFlags = listOf("-Dspring.aot.enabled=true")
     }
