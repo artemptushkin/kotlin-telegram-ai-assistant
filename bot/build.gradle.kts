@@ -62,7 +62,8 @@ tasks.withType<Test> {
 
 jib {
     container {
-        jvmFlags = listOf("-Dspring.aot.enabled=true")
+        // https://www.baeldung.com/spring-boot-startup-speed
+        jvmFlags = listOf("-Dspring.aot.enabled=true", "-Xverify:none")
     }
     from {
         image = "eclipse-temurin:21-jre"

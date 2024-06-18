@@ -1,4 +1,8 @@
 spring:
+  main:
+    banner-mode: off
+  jmx:
+    enabled: false
   cloud:
     gcp:
       # https://github.com/GoogleCloudPlatform/spring-cloud-gcp/blob/main/docs/src/main/asciidoc/logging.adoc
