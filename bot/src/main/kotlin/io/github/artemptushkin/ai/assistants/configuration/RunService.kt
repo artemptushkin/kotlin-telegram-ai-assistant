@@ -14,6 +14,8 @@ import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
+import io.github.artemptushkin.ai.assistants.telegram.sendMessageLoggingError
+import io.github.artemptushkin.ai.assistants.telegram.sendMessageMarkdownOrPlain
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -35,7 +37,7 @@ class RunService(
         val currentThreadId = historyService.fetchCurrentThread(chat.id.toString())
         bot.sendChatAction(chat, ChatAction.TYPING)
         if (currentThreadId == null) {
-            bot.sendMessage(chat, "No current thread, create one with /thread")
+            bot.sendMessageLoggingError(chat, "No current thread, create one with /thread")
         } else {
             val run = openAiService.createRun(
                 currentThreadId, RunCreateRequest
@@ -52,7 +54,7 @@ class RunService(
             async {
                 while (isActive && attempt.get() < MAX_ATTEMPTS) {
                     if (attempt.get() + 1 == MAX_ATTEMPTS) {
-                        bot.sendMessage(
+                        bot.sendMessageLoggingError(
                             chat,
                             "Proceeding with the last attempt out of $MAX_ATTEMPTS to get an answer from the assistant..."
                         )
@@ -81,7 +83,7 @@ class RunService(
                                         .forEach {
                                             it.chunkToTelegramMessageLimits()
                                                 .forEach { message ->
-                                                    val sendMessageResult = bot.sendMessage(chat, message)
+                                                    val sendMessageResult = bot.sendMessageMarkdownOrPlain(chat, message)
                                                     logger.debug("Saving assistant message")
                                                     historyService.saveOrAddMessage(
                                                         sendMessageResult.get(),
@@ -103,7 +105,7 @@ class RunService(
                                         .forEach {
                                             it.chunkToTelegramMessageLimits()
                                                 .forEach { message ->
-                                                    val sendMessageResult = bot.sendMessage(chat, message)
+                                                    val sendMessageResult = bot.sendMessageLoggingError(chat, message)
                                                     logger.debug("Saving assistant message")
                                                     historyService.saveOrAddMessage(
                                                         sendMessageResult.get(),
@@ -137,7 +139,7 @@ class RunService(
                                                             .build()
                                                     } else {
                                                         logger.error("Received an unknown function - ${toolFunction.name}, please implement it")
-                                                        bot.sendMessage(
+                                                        bot.sendMessageLoggingError(
                                                             chat,
                                                             "Received an unknown function - ${toolFunction.name}, please ask the administrator to implement it, see /help for info"
                                                         )

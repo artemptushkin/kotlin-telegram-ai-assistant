@@ -87,19 +87,19 @@ class TelegramConfiguration(
             dispatch {
                 command("help") {
                     val chat = this.message.chatId()
-                    bot.sendMessage(chat, telegramProperties.bot.helpMessage)
+                    bot.sendMessageLoggingError(chat, telegramProperties.bot.helpMessage)
                 }
                 command("start") {
                     val chat = this.message.chatId()
-                    bot.sendMessage(chat, "I'm happy to assist you, please type your prompt")
+                    bot.sendMessageLoggingError(chat, "I'm happy to assist you, please type your prompt")
                 }
                 command("currentThread") {
                     val chat = this.message.chatId()
                     val threadId = historyService.fetchCurrentThread(chat.id.toString())
                     if (threadId == null) {
-                        bot.sendMessage(chat, "No current thread, create one with /thread")
+                        bot.sendMessageLoggingError(chat, "No current thread, create one with /thread")
                     } else {
-                        bot.sendMessage(chat, "Current thread is: $threadId")
+                        bot.sendMessageLoggingError(chat, "Current thread is: $threadId")
                     }
                 }
                 command("thread") {
@@ -107,13 +107,13 @@ class TelegramConfiguration(
                     val thread = openAiService.createThread(ThreadRequest())
                     historyService.saveThread(chat.id.toString(), mutableListOf(), thread)
                     logger.debug("Thread has been created ${thread.id}")
-                    bot.sendMessage(chat, "Thread has been created ${thread.id}")
+                    bot.sendMessageLoggingError(chat, "Thread has been created ${thread.id}")
                 }
                 command("reset") {
                     val chat = this.message.chatId()
                     val threadId = historyService.fetchCurrentThread(chat.id.toString())
                     if (threadId == null) {
-                        bot.sendMessage(chat, "No current thread, create one with /thread")
+                        bot.sendMessageLoggingError(chat, "No current thread, create one with /thread")
                     } else {
                         chatContext.get(ContextKey.run(chat))?.let {
                             try {
@@ -132,7 +132,7 @@ class TelegramConfiguration(
                         }
                         openAiService.deleteThread(threadId)
                         logger.debug("Thread has been deleted $threadId")
-                        bot.sendMessage(chat, "Thread has been deleted $threadId")
+                        bot.sendMessageLoggingError(chat, "Thread has been deleted $threadId")
                     }
                     historyService.clearHistoryById(chat.id.toString())
                     logger.debug("Thread history has been cleared ${chat.id}")
@@ -197,7 +197,7 @@ class TelegramConfiguration(
                             runService.createAndRun(bot, message)
                         } catch (e: Exception) {
                             logger.error(e.message, e)
-                            bot.sendMessage(
+                            bot.sendMessageLoggingError(
                                 chat,
                                 "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
                             )
