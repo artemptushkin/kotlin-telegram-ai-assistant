@@ -20,7 +20,7 @@ fun Bot.sendMessageLoggingError(chat: ChatId.Id, message: String, parseMode: Par
 }
 
 fun Bot.sendMessageMarkdownOrPlain(chat: ChatId.Id, message: String): TelegramBotResult<Message> {
-    val messageResult = sendMessageLoggingError(chat, message, ParseMode.MARKDOWN_V2)
+    val messageResult = sendMessageLoggingError(chat, message, ParseMode.MARKDOWN)
     return if (messageResult.isError) {
         this.sendMessage(chat, message)
     } else {
