@@ -6,10 +6,13 @@ import com.github.kotlintelegrambot.dispatch
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatAction
+import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.Message
+import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
+import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
@@ -17,10 +20,7 @@ import io.github.artemptushkin.ai.assistants.configuration.RunService
 import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
-import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
-import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
-import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
-import io.github.artemptushkin.ai.assistants.telegram.conversation.isCommand
+import io.github.artemptushkin.ai.assistants.telegram.conversation.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
@@ -91,7 +91,11 @@ class TelegramConfiguration(
                 }
                 command("start") {
                     val chat = this.message.chatId()
-                    bot.sendMessageLoggingError(chat, "I'm happy to assist you, please type your prompt")
+                    bot.sendMessageLoggingError(chat, "I'm happy to assist you, please type your prompt", replyMarkup = KeyboardReplyMarkup(
+                        keyboard = listOf(
+                            buttons.flatMap { listOf(KeyboardButton(it)) }
+                        )
+                    ))
                 }
                 command("currentThread") {
                     val chat = this.message.chatId()
@@ -146,7 +150,7 @@ class TelegramConfiguration(
                         historyService.saveOrAddMessage(this.message)
                     }
                     val chat = this.message.chatId()
-                    if (message.text != null && !message.isCommand()) {
+                    if (message.text != null && !message.isCommand() && !message.isButtonCommand()) {
                         val chatHistory = historyService.fetchChatHistory(chat.id.toString())
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         val threadId = chatHistory?.threadId
@@ -201,6 +205,31 @@ class TelegramConfiguration(
                                 chat,
                                 "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
                             )
+                        }
+                    } else if (message.isButtonCommand()) {
+                        val clientChat = this.message.chatId()
+                        val chatHistory = historyService.fetchChatHistory(chat.id.toString())
+                        if (chatHistory?.threadId == null) {
+                            bot.sendMessageLoggingError(chat, "I'm sorry but I don't remember what we talked about. Please start from the beginning with /start")
+                        } else {
+                            val openAiMessage = openAiService.createMessage(
+                                chatHistory.threadId, this.message.toMessageRequest("user")
+                            )
+                            chatContext.save(ContextKey.chatAwaitKey(clientChat, this.message.from!!.id), message.text!!)
+                            logger.debug("Open AI message created: ${openAiMessage.id}")
+                            val assistantText = if (message.text == "Add words") {
+                                "Please type list of words to add"
+                            } else {
+                                "Please type list of words to delete"
+                            }
+                            bot.sendMessage(clientChat, assistantText)
+                            val openAiAssistantMessage = openAiService.createMessage(
+                                chatHistory.threadId, MessageRequest.MessageRequestBuilder()
+                                    .role("assistant")
+                                    .content(assistantText)
+                                    .build()
+                            )
+                            logger.debug("Open AI assistant message has been created: ${openAiAssistantMessage.id}")
                         }
                     }
                 }

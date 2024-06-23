@@ -4,11 +4,17 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.types.TelegramBotResult
 import org.slf4j.LoggerFactory
 
-fun Bot.sendMessageLoggingError(chat: ChatId.Id, message: String, parseMode: ParseMode? = null): TelegramBotResult<Message> {
-    return this.sendMessage(chat, message, parseMode = parseMode)
+fun Bot.sendMessageLoggingError(
+    chat: ChatId.Id,
+    message: String,
+    parseMode: ParseMode? = null,
+    replyMarkup: ReplyMarkup? = null
+): TelegramBotResult<Message> {
+    return this.sendMessage(chat, message, parseMode = parseMode, replyMarkup = replyMarkup)
         .onError { error ->
             when (error) {
                 is TelegramBotResult.Error.TelegramApi -> logger.error("${error.javaClass.simpleName}: ${error.errorCode}, description: ${error.description}")
@@ -20,12 +26,20 @@ fun Bot.sendMessageLoggingError(chat: ChatId.Id, message: String, parseMode: Par
 }
 
 fun Bot.sendMessageMarkdownOrPlain(chat: ChatId.Id, message: String): TelegramBotResult<Message> {
-    val messageResult = sendMessageLoggingError(chat, message, ParseMode.MARKDOWN)
+    val escapedMessage = escapeMarkdownV2Symbols.fold(message) { acc, symbol ->
+        acc.replace(symbol.toString(), "\\$symbol")
+    }
+    val messageResult = sendMessageLoggingError(
+        chat, escapedMessage,
+        ParseMode.MARKDOWN_V2
+    )
     return if (messageResult.isError) {
         this.sendMessage(chat, message)
     } else {
         messageResult
     }
 }
+
+private val escapeMarkdownV2Symbols = listOf('_', '-', "*", "(", ".", "!", "[", "`")
 
 private val logger = LoggerFactory.getLogger("io.github.artemptushkin.ai.assistants.telegram.BotHelper")

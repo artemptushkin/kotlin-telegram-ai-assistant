@@ -40,6 +40,8 @@ data class ContextKey<T: Any>(
         )
 
         fun run(chatId: ChatId.Id) = ContextKey(chatId, "current-run", "thread", keyToClass["run"]!!)
+
+        fun chatAwaitKey(chatId: ChatId.Id, userId: Long) = ContextKey(chatId, userId.toString(), "command", keyToClass["command"]!!)
     }
 
 
