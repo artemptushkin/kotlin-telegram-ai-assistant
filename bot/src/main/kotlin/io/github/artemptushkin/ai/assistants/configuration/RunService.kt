@@ -173,6 +173,6 @@ class RunService(
 
     companion object {
         val logger = LoggerFactory.getLogger(RunService::class.java)!!
-        const val MAX_ATTEMPTS = 10
+        const val MAX_ATTEMPTS = 15
     }
 }
