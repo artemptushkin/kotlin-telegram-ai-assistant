@@ -218,9 +218,9 @@ class TelegramConfiguration(
                             chatContext.save(ContextKey.chatAwaitKey(clientChat, this.message.from!!.id), message.text!!)
                             logger.debug("Open AI message created: ${openAiMessage.id}")
                             val assistantText = if (message.text == "Add words") {
-                                "Please type list of words to add"
+                                "Please type the list of words to add"
                             } else {
-                                "Please type list of words to delete"
+                                "Please type the list of words to delete"
                             }
                             bot.sendMessage(clientChat, assistantText)
                             val openAiAssistantMessage = openAiService.createMessage(
