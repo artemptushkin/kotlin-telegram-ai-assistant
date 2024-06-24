@@ -59,7 +59,7 @@ class RunService(
                             "Proceeding with the last attempt out of $MAX_ATTEMPTS to get an answer from the assistant..."
                         )
                     }
-                    delay(Duration.parse("3s"))
+                    delay(Duration.parse("1s"))
                     bot.sendChatAction(chat, ChatAction.TYPING)
                     val currentAttempt = attempt.getAndIncrement()
                     logger.debug("Executing attempt number $currentAttempt")
