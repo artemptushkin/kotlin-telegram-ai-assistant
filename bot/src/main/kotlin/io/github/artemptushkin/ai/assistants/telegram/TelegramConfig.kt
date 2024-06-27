@@ -209,7 +209,7 @@ class TelegramConfiguration(
                                 val newThread = openAiService.createThread(
                                     ThreadRequest
                                         .builder()
-                                        .messages(messagesToBeSaved)
+                                        .messages(listOf(this.message.toMessageRequest("user")))
                                         .build()
                                 )
                                 historyService.saveThread(chatHistory, newThread)

@@ -35,7 +35,7 @@ class TelegramHistoryService(
         historyRepository
             .findById(id)
             .flatMap { c ->
-                c.messages?.clear()
+             //   c.messages?.clear()
                 c.threadId = null
                 historyRepository.save(c)
             }.awaitSingle()
