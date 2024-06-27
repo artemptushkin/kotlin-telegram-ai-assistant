@@ -3,6 +3,7 @@ package io.github.artemptushkin.ai.assistants.telegram
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.dispatch
+import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatAction
@@ -15,8 +16,8 @@ import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
-import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
-import io.github.artemptushkin.ai.assistants.configuration.RunService
+import io.github.artemptushkin.ai.assistants.OnboardingDto
+import io.github.artemptushkin.ai.assistants.configuration.*
 import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
@@ -91,11 +92,41 @@ class TelegramConfiguration(
                 }
                 command("start") {
                     val chat = this.message.chatId()
-                    bot.sendMessageLoggingError(chat, "I'm happy to assist you, please type your prompt", replyMarkup = KeyboardReplyMarkup(
-                        keyboard = listOf(
-                            buttons.flatMap { listOf(KeyboardButton(it)) }
-                        )
-                    ))
+                    bot.sendMessageLoggingError(chat,
+                        "Hi! I will help you learn Dutch! Let’s choose your training level.",
+                        replyMarkup = KeyboardReplyMarkup(
+                            keyboard = listOf(
+                                buttons.map { KeyboardButton(it) }
+                            )
+                        ))
+                    chatContext.save(ContextKey.onboardingKey(chat, message.from!!.id), OnboardingDto())
+                }
+                callbackQuery {
+                    val clientChat = callbackQuery.from.id.toChat()
+                    val data = callbackQuery.data
+                    val contextKey = ContextKey.onboardingKey(clientChat, callbackQuery.from.id)
+                    val onboardingDto = chatContext.get(contextKey) as OnboardingDto
+                    if (onboardingDto.isAllSet()) {
+                        bot.sendMessage(clientChat, "The onboarding has been finished, if you willing to do it again please run /start command.")
+                        return@callbackQuery
+                    }
+                    if (data.isDifficultWordsSetting()) {
+                        logger.debug("Received callback query with words difficult setting, user id ${callbackQuery.from.id}")
+                        val words = data.getDifficultWordsNumber()
+                        onboardingDto.wordsNumber = words
+                        chatContext.save(contextKey, onboardingDto)
+                    }
+                    if (onboardingDto.isAllSet()) {
+                        val initialPrompt = initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
+                        /*
+                         todo it should
+                         * delete the current thread if exists
+                         * create a new thread with one single initialPrompt message
+                         * set the id of the created thread to the history record
+                         * set the initialPrompt to the history record
+                         */
+                        bot.sendMessage(clientChat, "Thank you, the onboarding has been finished and our conversation is ready for work. You can proceed with buttons below in the menu or by prompting me")
+                    }
                 }
                 command("currentThread") {
                     val chat = this.message.chatId()
@@ -145,13 +176,14 @@ class TelegramConfiguration(
                     runService.createAndRun(bot, message)
                 }
                 message {
-                    if (!environment.acceptsProfiles(Profiles.of("webhook"))) {
+                    val chat = this.message.chatId()
+                    val chatHistory = if (!environment.acceptsProfiles(Profiles.of("webhook"))) {
                         logger.debug("Polling is enabled, we save the message before processing it to preserve the chat history")
                         historyService.saveOrAddMessage(this.message)
+                    } else {
+                        historyService.fetchChatHistory(chat.id.toString())
                     }
-                    val chat = this.message.chatId()
                     if (message.text != null && !message.isCommand() && !message.isButtonCommand()) {
-                        val chatHistory = historyService.fetchChatHistory(chat.id.toString())
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         val threadId = chatHistory?.threadId
                         if (threadId == null) {
@@ -163,12 +195,17 @@ class TelegramConfiguration(
                                         .messages(listOf(this.message.toMessageRequest("user")))
                                         .build()
                                 )
-                                historyService.saveThread(chat.id.toString(), mutableListOf(this.message to "user"), newThread)
+                                historyService.saveThread(
+                                    chat.id.toString(),
+                                    mutableListOf(this.message to "user"),
+                                    newThread
+                                )
                                 logger.debug("Thread created")
                             } else {
                                 logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
-                                val messagesToBeSaved = populateCurrentMessageIfNotExists(chatHistory.messages, this.message)
-                                    ?.map { it.toMessageRequest() }
+                                val messagesToBeSaved =
+                                    populateCurrentMessageIfNotExists(chatHistory.messages, this.message)
+                                        ?.map { it.toMessageRequest() }
                                 val newThread = openAiService.createThread(
                                     ThreadRequest
                                         .builder()
@@ -184,7 +221,7 @@ class TelegramConfiguration(
                                 openAiService
                                     .listRuns(threadId, ListSearchParameters())
                                     .getData()
-                                    .filter { it.status == "queued" || it.status == "in_progress"  || it.status == "requires_action" || it.status == "cancelling" } // todo refactor here
+                                    .filter { it.status == "queued" || it.status == "in_progress" || it.status == "requires_action" || it.status == "cancelling" } // todo refactor here
                                     .forEach {
                                         logger.warn("Cancelling the active run ${it.id} as another message is coming")
                                         openAiService.cancelRun(threadId, it.id)
@@ -196,6 +233,10 @@ class TelegramConfiguration(
                             } catch (e: Exception) {
                                 logger.error("Handled exception during the create message processing: ${e.message}")
                             }
+                        }
+                        val contextKey = ContextKey.chatAwaitKey(chat, this.message.from!!.id)
+                        if (chatContext.get(contextKey) != null) {
+                            chatContext.delete(contextKey)
                         }
                         try {
                             runService.createAndRun(bot, message)
@@ -210,12 +251,18 @@ class TelegramConfiguration(
                         val clientChat = this.message.chatId()
                         val chatHistory = historyService.fetchChatHistory(chat.id.toString())
                         if (chatHistory?.threadId == null) {
-                            bot.sendMessageLoggingError(chat, "I'm sorry but I don't remember what we talked about. Please start from the beginning with /start")
+                            bot.sendMessageLoggingError(
+                                chat,
+                                "I'm sorry but I don't remember what we talked about. Please start from the beginning with /start"
+                            )
                         } else {
                             val openAiMessage = openAiService.createMessage(
                                 chatHistory.threadId, this.message.toMessageRequest("user")
                             )
-                            chatContext.save(ContextKey.chatAwaitKey(clientChat, this.message.from!!.id), message.text!!)
+                            chatContext.save(
+                                ContextKey.chatAwaitKey(clientChat, this.message.from!!.id),
+                                message.text!!
+                            )
                             logger.debug("Open AI message created: ${openAiMessage.id}")
                             val assistantText = if (message.text == "Add words") {
                                 "Please type the list of words to add"

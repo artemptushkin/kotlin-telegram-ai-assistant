@@ -74,6 +74,7 @@ class RunService(
                             logger.info("Received run status: ${run.status}")
                             when (run.status) {
                                 "completed" -> {
+                                    logger.debug("Run ${run.id} has bean completed, ${run.usage}")
                                     openAiService
                                         .listMessages(currentThreadId, MessageListSearchParameters())
                                         .data

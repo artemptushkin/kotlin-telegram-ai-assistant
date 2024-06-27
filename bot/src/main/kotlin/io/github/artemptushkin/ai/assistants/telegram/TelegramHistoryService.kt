@@ -32,7 +32,7 @@ class TelegramHistoryService(
     }
 
     suspend fun clearHistoryById(id: String) {
-         historyRepository
+        historyRepository
             .findById(id)
             .flatMap { c ->
                 c.messages?.clear()
@@ -51,7 +51,13 @@ class TelegramHistoryService(
 
     suspend fun saveThread(chatId: String, messages: MutableList<Pair<Message, String>>, thread: Thread): String? {
         return historyRepository
-            .save(ChatHistory(id = chatId, threadId = thread.id, messages = messages.map { it.first.toMessage(it.second) }.toMutableList()))
+            .save(
+                ChatHistory(
+                    id = chatId,
+                    threadId = thread.id,
+                    messages = messages.map { it.first.toMessage(it.second) }.toMutableList()
+                )
+            )
             .mapNotNull { it.threadId }
             .awaitSingleOrNull()
     }
@@ -62,6 +68,7 @@ class TelegramHistoryService(
             .mapNotNull { it.threadId }
             .awaitSingleOrNull()
     }
+
     suspend fun fetchChatHistory(chatId: String): ChatHistory? {
         return historyRepository
             .findById(chatId)
