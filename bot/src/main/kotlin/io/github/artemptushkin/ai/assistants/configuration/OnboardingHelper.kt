@@ -1,14 +1,23 @@
 package io.github.artemptushkin.ai.assistants.configuration
 
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
+import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
+import io.github.artemptushkin.ai.assistants.telegram.conversation.buttons
 
 fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     listOf(
         InlineKeyboardButton.CallbackData("Easy - 5 words", "settings.difficult:5"),
         InlineKeyboardButton.CallbackData("Medium - 7 words", "settings.difficult:7"),
         InlineKeyboardButton.CallbackData("Hard - 10 words", "settings.difficult:10"),
+    )
+)
+
+fun postOnboardingButtons(): ReplyMarkup = KeyboardReplyMarkup(
+    keyboard = listOf(
+        buttons.map { KeyboardButton(it) }
     )
 )
 

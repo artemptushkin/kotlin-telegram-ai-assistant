@@ -7,9 +7,7 @@ import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatAction
-import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.Message
-import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
@@ -92,13 +90,11 @@ class TelegramConfiguration(
                 }
                 command("start") {
                     val chat = this.message.chatId()
-                    bot.sendMessageLoggingError(chat,
+                    bot.sendMessageLoggingError(
+                        chat,
                         "Hi! I will help you learn Dutch! Let’s choose your training level.",
-                        replyMarkup = KeyboardReplyMarkup(
-                            keyboard = listOf(
-                                buttons.map { KeyboardButton(it) }
-                            )
-                        ))
+                        replyMarkup = settingsInlineButtons()
+                    )
                     chatContext.save(ContextKey.onboardingKey(chat, message.from!!.id), OnboardingDto())
                 }
                 callbackQuery {
@@ -107,7 +103,11 @@ class TelegramConfiguration(
                     val contextKey = ContextKey.onboardingKey(clientChat, callbackQuery.from.id)
                     val onboardingDto = chatContext.get(contextKey) as OnboardingDto
                     if (onboardingDto.isAllSet()) {
-                        bot.sendMessage(clientChat, "The onboarding has been finished, if you willing to do it again please run /start command.")
+                        bot.sendMessage(
+                            clientChat,
+                            "The onboarding has been already finished, if you willing to do it again please run /start command.",
+                            replyMarkup = postOnboardingButtons()
+                        )
                         return@callbackQuery
                     }
                     if (data.isDifficultWordsSetting()) {
@@ -117,15 +117,31 @@ class TelegramConfiguration(
                         chatContext.save(contextKey, onboardingDto)
                     }
                     if (onboardingDto.isAllSet()) {
-                        val initialPrompt = initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
-                        /*
-                         todo it should
-                         * delete the current thread if exists
-                         * create a new thread with one single initialPrompt message
-                         * set the id of the created thread to the history record
-                         * set the initialPrompt to the history record
-                         */
-                        bot.sendMessage(clientChat, "Thank you, the onboarding has been finished and our conversation is ready for work. You can proceed with buttons below in the menu or by prompting me")
+                        chatContext.delete(contextKey)
+                        val initialPrompt =
+                            initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
+                        val chatHistory = historyService.fetchChatHistory(clientChat.id.toString())
+                        if (chatHistory?.threadId != null) {
+                            logger.debug("Deleting the thread on the finished onboarding process")
+                            openAiService.deleteThread(chatHistory.threadId)
+                        }
+                        val newThread = openAiService.createThread(
+                            ThreadRequest
+                                .builder()
+                                .messages(
+                                    listOf(
+                                        MessageRequest.builder().role("user").content(initialPrompt).build()
+                                    )
+                                )
+                                .build()
+                        )
+                        logger.debug("New thread ${newThread.id} with the initial prompt has been created during the onboarding process")
+                        if (chatHistory != null) {
+                            historyService.saveThread(chatHistory, newThread, initialPrompt)
+                        } else {
+                            historyService.saveThreadWithInitialPrompt(clientChat.id.toString(), newThread, initialPrompt)
+                        }
+                        bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.")
                     }
                 }
                 command("currentThread") {
@@ -177,6 +193,15 @@ class TelegramConfiguration(
                 }
                 message {
                     val chat = this.message.chatId()
+                    val contextKey = ContextKey.onboardingKey(chat, message.from!!.id)
+                    val onboardingDto = chatContext.get(contextKey)
+                    if (onboardingDto != null && onboardingDto is OnboardingDto && !onboardingDto.isAllSet()) {
+                        bot.sendMessage(
+                            chat,
+                            "You're in progress of the onboarding executed by the /start command. Please finish it"
+                        )
+                        return@message
+                    }
                     val chatHistory = if (!environment.acceptsProfiles(Profiles.of("webhook"))) {
                         logger.debug("Polling is enabled, we save the message before processing it to preserve the chat history")
                         historyService.saveOrAddMessage(this.message)

@@ -41,8 +41,19 @@ class TelegramHistoryService(
             }.awaitSingle()
     }
 
-    suspend fun saveThread(chatHistory: ChatHistory, thread: Thread): String? {
+    suspend fun saveThreadWithInitialPrompt(chatId: String, thread: Thread, initialPrompt: String): ChatHistory? {
+        return historyRepository
+            .save(ChatHistory(
+                id = chatId,
+                threadId = thread.id,
+                initialPrompt = initialPrompt
+            ))
+            .awaitSingleOrNull()
+    }
+
+    suspend fun saveThread(chatHistory: ChatHistory, thread: Thread, initialPrompt: String? = null): String? {
         chatHistory.threadId = thread.id
+        chatHistory.initialPrompt = initialPrompt
         return historyRepository
             .save(chatHistory)
             .mapNotNull { it.threadId }
