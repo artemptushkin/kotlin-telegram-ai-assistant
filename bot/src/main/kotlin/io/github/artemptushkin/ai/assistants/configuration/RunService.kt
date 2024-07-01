@@ -131,7 +131,7 @@ class RunService(
                                                 .let {
                                                     if (it != null) {
                                                         logger.debug("Executing function '${it.name()}'")
-                                                        val result = it.handle(rawArgs)
+                                                        val result = it.handle(rawArgs, TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
                                                         logger.info("Submitting tool outputs, thread: $currentThreadId, run: ${run.id}")
                                                         SubmitToolOutputRequestItem
                                                             .builder()
