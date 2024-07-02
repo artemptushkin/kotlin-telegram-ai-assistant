@@ -18,6 +18,7 @@ class AddWordsFunction(
         return runBlocking {
             try {
                 val addRequest = objectMapper.treeToValue(from, AddRequest::class.java)
+                logger.debug("Add words function calling: ${addRequest.words}")
                 learningWordsService
                     .add(addRequest.words, telegramContext)
                     .responseToAssistant()
