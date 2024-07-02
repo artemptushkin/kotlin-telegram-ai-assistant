@@ -24,13 +24,14 @@ class LearningWordsService(
                 LearningWords(
                     id = makeId(telegramContext.botId, telegramContext.chatId),
                     language = telegramContext.metadata["language"] as String,
-                    words = words.toMutableSet(), // no sure why but it duplicates words sometimes
+                    words = words.distinct().toMutableList(), // no sure why but it duplicates words sometimes
                     botId = telegramContext.botId,
                     chatId = telegramContext.chatId
                 )
             }
             .apply {
                 this.words?.addAll(words)
+                this.words = this.words?.distinct()?.toMutableList()
                 learningWordsRepository
                     .save(this)
                     .awaitSingle()

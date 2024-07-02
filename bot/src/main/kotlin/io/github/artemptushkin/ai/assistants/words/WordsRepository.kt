@@ -13,7 +13,7 @@ data class LearningWords(
     @DocumentId
     var id: String? = null,
     var language: String? = null,
-    var words: MutableSet<String>? = null,
+    var words: MutableList<String>? = null,
     var chatId: String? = null,
     var botId: String? = null,
 ) {
