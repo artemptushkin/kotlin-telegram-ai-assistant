@@ -50,4 +50,16 @@ class LearningWordsService(
             }
     }
 
+    suspend fun deleteAll(telegramContext: TelegramContext) {
+        learningWordsRepository
+            .findById(makeId(telegramContext.botId, telegramContext.chatId))
+            .awaitFirstOrNull()
+            ?.apply {
+                this.words?.clear()
+                learningWordsRepository
+                    .save(this)
+                    .awaitSingle()
+            }
+    }
+
 }

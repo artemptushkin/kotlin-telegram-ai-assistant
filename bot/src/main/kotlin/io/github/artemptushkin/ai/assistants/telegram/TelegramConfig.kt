@@ -20,6 +20,7 @@ import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.*
+import io.github.artemptushkin.ai.assistants.words.LearningWordsService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
@@ -48,6 +49,7 @@ class TelegramConfiguration(
     private val chatContext: ChatContext,
     private val environment: Environment,
     private val historyService: TelegramHistoryService,
+    private val learningWordsService: LearningWordsService,
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -187,6 +189,8 @@ class TelegramConfiguration(
                     }
                     historyService.clearHistoryById(chat.id.toString())
                     logger.debug("Thread history has been cleared ${chat.id}")
+                    learningWordsService.deleteAll(TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
+                    logger.debug("Learning words has been cleared ${chat.id}")
                 }
                 command("run") {
                     runService.createAndRun(bot, message)
