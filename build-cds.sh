@@ -1,9 +1,9 @@
 #!/bin/sh
 
-IMAGE_TAG=latest
-#IMAGE_TAG=local-tests
+IMAGE_TAG=$(date +%s)
+IMAGE_TARGET_TAG=latest
 
-echo "Building the prebuild image"
+echo "Building the prebuild image, the tag is: $IMAGE_TAG"
 ./gradlew jibDockerBuild -Djib.to.image=ai-telegram-assistants-prebuild -Djib.to.tags=$IMAGE_TAG
 
 mkdir -p ${PWD}/bot/build/libs/cds
@@ -14,10 +14,10 @@ docker run -w /app -ti --entrypoint=/opt/java/openjdk/bin/java \
   -Dspring.context.exit=onRefresh \
   -cp "@jib-classpath-file" io.github.artemptushkin.ai.assistants.AiTelegramAssistantsApplicationKt || true
 
-echo "Building the final image"
-#./gradlew jibDockerBuild \
+echo "Building the final image, the tag is: $IMAGE_TAG"
 ./gradlew jib \
   -Djib.to.image=europe-west4-docker.pkg.dev/peak-empire-400413/ai-telegram-assistants/ai-telegram-assistants \
-  #-Djib.to.image=ai-telegram-assistants \
   -Djib.container.jvmFlags="-Dspring.aot.enabled=true,-Xshare:on,-XX:SharedArchiveFile=/cds/application.jsa" \
-  -Djib.to.tags=$IMAGE_TAG
+  -Djib.to.tags=$IMAGE_TAG,$IMAGE_TARGET_TAG
+
+echo "Image has been built, the tag is: $IMAGE_TAG"

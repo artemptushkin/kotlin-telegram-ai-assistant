@@ -4,12 +4,9 @@ import com.google.cloud.firestore.annotation.DocumentId
 import com.google.cloud.spring.data.firestore.Document
 import com.google.cloud.spring.data.firestore.FirestoreReactiveRepository
 import org.springframework.stereotype.Repository
-import reactor.core.publisher.Flux
 
 @Repository
-interface LearningWordsRepository : FirestoreReactiveRepository<LearningWords> {
-    fun findByBotIdAndLanguageAndChatId(botId: String, language: String, chatId: String): Flux<LearningWords>
-}
+interface LearningWordsRepository : FirestoreReactiveRepository<LearningWords>
 
 @Document(collectionName = "learning-words")
 data class LearningWords(
@@ -24,3 +21,5 @@ data class LearningWords(
         return "Words have been updated, the current list is: ${words?.joinToString()}"
     }
 }
+
+fun makeId(chat: String, bot: String): String = "$bot:$chat"

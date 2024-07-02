@@ -43,7 +43,7 @@ class DeleteWordsFunction(
                 val deleteRequest = objectMapper.treeToValue(from, DeleteRequest::class.java)
                 learningWordsService
                     .delete(deleteRequest.words, telegramContext)
-                    .responseToAssistant()
+                    ?.responseToAssistant() ?: "The current list is already empty"
             } catch (e: Exception) {
                 logger.error("Exception handled during ${name()} function", e)
                 "Exception handled during the HTTP call. Assistant should evaluate the following error message: ${e.message}. Assistant should repeat the function execution if possible. If it's not possible then assistant should respond to user they should contact the administrator at art.ptushkin@gmail.com"
