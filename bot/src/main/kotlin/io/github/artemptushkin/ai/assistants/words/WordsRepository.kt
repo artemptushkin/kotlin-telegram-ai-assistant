@@ -16,10 +16,12 @@ data class LearningWords(
     var words: MutableList<String>? = null,
     var chatId: String? = null,
     var botId: String? = null,
-) {
-    fun responseToAssistant(): String {
-        return "Words have been updated, the current list is: ${words?.joinToString()}"
-    }
-}
+)
 
+fun LearningWords.responseToAssistant(): String {
+    return "Words have been updated, the current list is: ${words?.joinToString()}"
+}
+fun LearningWords.userResponse(): String {
+    return "My initial set of words: ${words?.joinToString()}"
+}
 fun makeId(bot: String, chat: String): String = "$bot:$chat"
