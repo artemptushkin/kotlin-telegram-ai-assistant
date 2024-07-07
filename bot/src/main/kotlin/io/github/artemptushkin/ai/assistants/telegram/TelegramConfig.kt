@@ -12,18 +12,16 @@ import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.OpenAiHttpException
-import com.theokanning.openai.assistants.message.MessageRequest
-import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.OnboardingDto
 import io.github.artemptushkin.ai.assistants.configuration.*
 import io.github.artemptushkin.ai.assistants.openai.ThreadManagementService
 import io.github.artemptushkin.ai.assistants.repository.ChatMessage
+import io.github.artemptushkin.ai.assistants.repository.toAssistantMessageRequest
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.*
 import io.github.artemptushkin.ai.assistants.words.LearningWordsService
-import io.github.artemptushkin.ai.assistants.words.userResponse
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
@@ -131,22 +129,7 @@ class TelegramConfiguration(
                             logger.debug("Deleting the thread on the finished onboarding process")
                             openAiService.deleteThread(chatHistory.threadId)
                         }
-                        val newThread = openAiService.createThread(
-                            ThreadRequest
-                                .builder()
-                                .messages(
-                                    listOf(
-                                        MessageRequest.builder().role("user").content(initialPrompt).build()
-                                    )
-                                )
-                                .build()
-                        )
-                        logger.debug("New thread ${newThread.id} with the initial prompt has been created during the onboarding process")
-                        if (chatHistory != null) {
-                            historyService.saveThread(chatHistory, newThread, initialPrompt)
-                        } else {
-                            historyService.saveThreadWithInitialPrompt(clientChat.id.toString(), newThread, initialPrompt)
-                        }
+                        threadManagementService.saveOnboardingThread(clientChat.id.toString(), chatHistory, initialPrompt)
                         bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.")
                     }
                 }
@@ -158,13 +141,6 @@ class TelegramConfiguration(
                     } else {
                         bot.sendMessageLoggingError(chat, "Current thread is: $threadId")
                     }
-                }
-                command("thread") {
-                    val chat = this.message.chatId()
-                    val thread = openAiService.createThread(ThreadRequest())
-                    historyService.saveThread(chat.id.toString(), mutableListOf(), thread)
-                    logger.debug("Thread has been created ${thread.id}")
-                    bot.sendMessageLoggingError(chat, "Thread has been created ${thread.id}")
                 }
                 command("reset") {
                     val chat = this.message.chatId()
@@ -224,44 +200,10 @@ class TelegramConfiguration(
                     }
                     if (message.text != null && !message.isCommand() && !message.isButtonCommand()) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
-                        val threadId = chatHistory?.threadId
                         val words = learningWordsService.getWords(TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
-                        val initialSetOfWords = words?.let {
-                            MessageRequest.builder().role("user").content(words.userResponse()).build()
-                        }
+                        val threadId = chatHistory?.threadId
                         if (threadId == null) {
-                            if (chatHistory == null) {
-                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id}, no known history exists")
-                                val newThread = openAiService.createThread(
-                                    ThreadRequest
-                                        .builder()
-                                        .messages(listOf(
-                                            this.message.toMessageRequest("user"),
-                                            initialSetOfWords
-                                        ))
-                                        .build()
-                                )
-                                historyService.saveThread(
-                                    chat.id.toString(),
-                                    mutableListOf(this.message to "user"),
-                                    newThread
-                                )
-                                logger.debug("Thread created")
-                            } else {
-                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the initial prompt and initial set of words")
-                                val newThread = openAiService.createThread(
-                                    ThreadRequest
-                                        .builder()
-                                        .messages(listOf(
-                                            MessageRequest.builder().role("user").content(chatHistory.initialPrompt).build(),
-                                            initialSetOfWords,
-                                            this.message.toMessageRequest("user"),
-                                        ))
-                                        .build()
-                                )
-                                historyService.saveThread(chatHistory, newThread)
-                                logger.debug("Thread created")
-                            }
+                            threadManagementService.saveThread(chat.id.toString(), chatHistory, message, words)
                         } else {
                             logger.debug("Creating a new message on the existent thread $threadId")
                             try {
@@ -296,7 +238,6 @@ class TelegramConfiguration(
                         }
                     } else if (message.isButtonCommand()) {
                         val clientChat = this.message.chatId()
-                        val chatHistory = historyService.fetchChatHistory(chat.id.toString())
                         if (chatHistory?.threadId == null) {
                             bot.sendMessageLoggingError(
                                 chat,
@@ -318,10 +259,7 @@ class TelegramConfiguration(
                             }
                             bot.sendMessage(clientChat, assistantText)
                             val openAiAssistantMessage = openAiService.createMessage(
-                                chatHistory.threadId, MessageRequest.MessageRequestBuilder()
-                                    .role("assistant")
-                                    .content(assistantText)
-                                    .build()
+                                chatHistory.threadId, assistantText.toAssistantMessageRequest()
                             )
                             logger.debug("Open AI assistant message has been created: ${openAiAssistantMessage.id}")
                         }

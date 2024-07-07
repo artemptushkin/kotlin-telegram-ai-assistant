@@ -40,26 +40,27 @@ class TelegramHistoryService(
             }.awaitSingle()
     }
 
-    suspend fun saveThreadWithInitialPrompt(chatId: String, thread: Thread, initialPrompt: String): ChatHistory? {
+    suspend fun saveThreadWithInitialPrompt(chatId: String, thread: Thread, initialPrompt: String): ChatHistory {
         return historyRepository
             .save(ChatHistory(
                 id = chatId,
                 threadId = thread.id,
                 initialPrompt = initialPrompt
             ))
-            .awaitSingleOrNull()
+            .awaitSingle()
     }
 
-    suspend fun saveThread(chatHistory: ChatHistory, thread: Thread, initialPrompt: String? = null): String? {
+    suspend fun saveThread(chatHistory: ChatHistory, thread: Thread, initialPrompt: String? = null): ChatHistory {
         chatHistory.threadId = thread.id
-        chatHistory.initialPrompt = initialPrompt
+        initialPrompt?.let {
+            chatHistory.initialPrompt = it
+        }
         return historyRepository
             .save(chatHistory)
-            .mapNotNull { it.threadId }
-            .awaitSingleOrNull()
+            .awaitSingle()
     }
 
-    suspend fun saveThread(chatId: String, messages: MutableList<Pair<Message, String>>, thread: Thread): String? {
+    suspend fun saveThread(chatId: String, messages: MutableList<Pair<Message, String>>, thread: Thread): ChatHistory {
         return historyRepository
             .save(
                 ChatHistory(
@@ -68,8 +69,7 @@ class TelegramHistoryService(
                     messages = messages.map { it.first.toMessage(it.second) }.toMutableList()
                 )
             )
-            .mapNotNull { it.threadId }
-            .awaitSingleOrNull()
+            .awaitSingle()
     }
 
     suspend fun fetchCurrentThread(chatId: String): String? {

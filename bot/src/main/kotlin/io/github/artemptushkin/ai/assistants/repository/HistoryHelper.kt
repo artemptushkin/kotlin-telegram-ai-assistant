@@ -14,6 +14,18 @@ fun Message.toMessageRequest(role: String): MessageRequest =
         .role(role)
         .build()
 
+fun String.toUserMessageRequest(): MessageRequest =
+    MessageRequest.builder()
+        .content(this)
+        .role("user")
+        .build()
+
+fun String.toAssistantMessageRequest(): MessageRequest =
+    MessageRequest.builder()
+        .content(this)
+        .role("assistant")
+        .build()
+
 fun Message.toMessage(role: String = "user"): ChatMessage = ChatMessage(
     id = this.messageId,
     text = this.text,
