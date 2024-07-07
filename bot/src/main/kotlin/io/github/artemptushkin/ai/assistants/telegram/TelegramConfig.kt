@@ -11,11 +11,13 @@ import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
+import com.theokanning.openai.OpenAiHttpException
 import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.OnboardingDto
 import io.github.artemptushkin.ai.assistants.configuration.*
+import io.github.artemptushkin.ai.assistants.openai.ThreadManagementService
 import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
@@ -50,6 +52,7 @@ class TelegramConfiguration(
     private val environment: Environment,
     private val historyService: TelegramHistoryService,
     private val learningWordsService: LearningWordsService,
+    private val threadManagementService: ThreadManagementService,
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -183,8 +186,12 @@ class TelegramConfiguration(
                                 logger.error("Exception during removal of runs ${e.message}", e)
                             }
                         }
-                        openAiService.deleteThread(threadId)
-                        logger.debug("Thread has been deleted $threadId")
+                        try {
+                            openAiService.deleteThread(threadId)
+                            logger.debug("Thread has been deleted $threadId")
+                        } catch (e: OpenAiHttpException) {
+                            logger.warn(e.message)
+                        }
                         bot.sendMessageLoggingError(chat, "Thread has been deleted $threadId")
                     }
                     historyService.clearHistoryById(chat.id.toString())
@@ -208,22 +215,24 @@ class TelegramConfiguration(
                     }
                     val chatHistory = if (!environment.acceptsProfiles(Profiles.of("webhook"))) {
                         logger.debug("Polling is enabled, we save the message before processing it to preserve the chat history")
-                        historyService.saveOrAddMessage(this.message)
+                        val history = historyService.saveOrAddMessage(this.message)
+                        threadManagementService.deleteThreadIfAcceptable(chat.id.toString(), history)
                     } else {
-                        historyService.fetchChatHistory(chat.id.toString())
+                        val history = historyService.fetchChatHistory(chat.id.toString())
+                        threadManagementService.deleteThreadIfAcceptable(chat.id.toString(), history)
                     }
                     if (message.text != null && !message.isCommand() && !message.isButtonCommand()) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         val threadId = chatHistory?.threadId
                         if (threadId == null) {
+                            logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
+                            val newThread = openAiService.createThread(
+                                ThreadRequest
+                                    .builder()
+                                    .messages(listOf(this.message.toMessageRequest("user")))
+                                    .build()
+                            )
                             if (chatHistory == null) {
-                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} using current message as initial history")
-                                val newThread = openAiService.createThread(
-                                    ThreadRequest
-                                        .builder()
-                                        .messages(listOf(this.message.toMessageRequest("user")))
-                                        .build()
-                                )
                                 historyService.saveThread(
                                     chat.id.toString(),
                                     mutableListOf(this.message to "user"),
@@ -231,16 +240,6 @@ class TelegramConfiguration(
                                 )
                                 logger.debug("Thread created")
                             } else {
-                                logger.debug("Thread doesn't exist, creating a new one for user ${this.message.from?.id} attaching the history")
-                                val messagesToBeSaved =
-                                    populateCurrentMessageIfNotExists(chatHistory.messages, this.message)
-                                        ?.map { it.toMessageRequest() }
-                                val newThread = openAiService.createThread(
-                                    ThreadRequest
-                                        .builder()
-                                        .messages(listOf(this.message.toMessageRequest("user")))
-                                        .build()
-                                )
                                 historyService.saveThread(chatHistory, newThread)
                                 logger.debug("Thread created")
                             }
@@ -263,9 +262,9 @@ class TelegramConfiguration(
                                 logger.error("Handled exception during the create message processing: ${e.message}")
                             }
                         }
-                        val contextKey = ContextKey.chatAwaitKey(chat, this.message.from!!.id)
-                        if (chatContext.get(contextKey) != null) {
-                            chatContext.delete(contextKey)
+                        val awaitContextKey = ContextKey.chatAwaitKey(chat, this.message.from!!.id)
+                        if (chatContext.get(awaitContextKey) != null) {
+                            chatContext.delete(awaitContextKey)
                         }
                         try {
                             runService.createAndRun(bot, message)
@@ -342,6 +341,10 @@ data class TelegramProperties(
     val webhook: WebHookProperties = WebHookProperties()
 )
 
+data class OpenAiProperties(
+    val threadCleanupStrategies: List<String>? = null // canonical class names
+)
+
 data class WebHookProperties(
     val url: String? = null,
     val secretToken: String? = null
@@ -350,5 +353,6 @@ data class WebHookProperties(
 data class BotProperties(
     val token: String = "",
     val helpMessage: String = "",
-    val assistantId: String = ""
+    val assistantId: String = "", // todo move to open ai properties
+    val openAi: OpenAiProperties = OpenAiProperties()
 )

@@ -5,6 +5,9 @@ import com.google.cloud.firestore.annotation.DocumentId
 import com.google.cloud.spring.data.firestore.Document
 import com.google.cloud.spring.data.firestore.FirestoreReactiveRepository
 import org.springframework.stereotype.Repository
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Repository
 interface TelegramHistoryRepository : FirestoreReactiveRepository<ChatHistory>
@@ -22,6 +25,12 @@ data class ChatHistory(
             this.messages = mutableListOf()
         }
         this.messages?.add(tgMessage?.toMessage(role)!!)
+    }
+}
+
+fun ChatHistory.getLatestMessageDate(): LocalDate? {
+    return this.messages?.maxByOrNull { it.timestamp ?: 0L }?.timestamp?.let {
+        Instant.ofEpochSecond(it).atZone(ZoneId.systemDefault()).toLocalDate()
     }
 }
 
