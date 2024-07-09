@@ -3,6 +3,7 @@ package io.github.artemptushkin.ai.assistants.telegram
 import com.github.kotlintelegrambot.entities.Message
 import com.theokanning.openai.assistants.thread.Thread
 import io.github.artemptushkin.ai.assistants.repository.ChatHistory
+import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.TelegramHistoryRepository
 import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.telegram.conversation.chatId
@@ -83,5 +84,14 @@ class TelegramHistoryService(
         return historyRepository
             .findById(chatId)
             .awaitSingleOrNull()
+    }
+
+    suspend fun fetchMessageById(chatId: String, messageIdReference: Long): ChatMessage? {
+        return historyRepository
+            .findById(chatId)
+            .awaitSingleOrNull()
+            .let { chatHistory ->
+                chatHistory?.messages?.find { message -> message.id == messageIdReference }
+            }
     }
 }

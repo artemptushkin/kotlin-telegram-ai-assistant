@@ -9,13 +9,10 @@ import com.theokanning.openai.assistants.run.RunCreateRequest
 import com.theokanning.openai.assistants.run.SubmitToolOutputRequestItem
 import com.theokanning.openai.assistants.run.SubmitToolOutputsRequest
 import com.theokanning.openai.service.OpenAiService
-import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
-import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
+import io.github.artemptushkin.ai.assistants.telegram.*
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
-import io.github.artemptushkin.ai.assistants.telegram.sendMessageLoggingError
-import io.github.artemptushkin.ai.assistants.telegram.sendMessageMarkdownOrPlain
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -27,6 +24,7 @@ class RunService(
     private val telegramProperties: TelegramProperties,
     private val openAiFunctions: Map<String, OpenAiFunction>,
     private val historyService: TelegramHistoryService,
+    private val assistantMessageProcessor: AssistantMessageProcessor,
     runsServiceDispatcher: CoroutineDispatcher,
 ) {
 
@@ -84,7 +82,8 @@ class RunService(
                                         .forEach {
                                             it.chunkToTelegramMessageLimits()
                                                 .forEach { message ->
-                                                    val sendMessageResult = bot.sendMessageMarkdownOrPlain(chat, message)
+                                                    val assistantMessage = assistantMessageProcessor.format(message)
+                                                    val sendMessageResult = bot.sendMessageMarkdownOrPlain(chat, assistantMessage.text, assistantMessage.replyMarkup)
                                                     logger.debug("Saving assistant message")
                                                     historyService.saveOrAddMessage(
                                                         sendMessageResult.get(),
@@ -106,7 +105,8 @@ class RunService(
                                         .forEach {
                                             it.chunkToTelegramMessageLimits()
                                                 .forEach { message ->
-                                                    val sendMessageResult = bot.sendMessageLoggingError(chat, message)
+                                                    val assistantMessage = assistantMessageProcessor.format(message)
+                                                    val sendMessageResult = bot.sendMessageMarkdownOrPlain(chat, assistantMessage.text, assistantMessage.replyMarkup)
                                                     logger.debug("Saving assistant message")
                                                     historyService.saveOrAddMessage(
                                                         sendMessageResult.get(),

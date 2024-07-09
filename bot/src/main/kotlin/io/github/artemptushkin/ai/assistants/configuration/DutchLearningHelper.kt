@@ -5,7 +5,8 @@ import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
 import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
-import io.github.artemptushkin.ai.assistants.telegram.conversation.buttons
+
+val buttons = listOf("Add words", "Delete words", "Create a story")
 
 fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     listOf(
@@ -15,11 +16,53 @@ fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     )
 )
 
+fun dutchStoriesInlineButtons(): InlineKeyboardMarkup = InlineKeyboardMarkup.create(
+    listOf(
+        InlineKeyboardButton.CallbackData("Translation", "request.translation"),
+        InlineKeyboardButton.CallbackData("List of words", "request.list-of-words"),
+    )
+)
+
+fun String.getMessageIdFromCallback(): String = this.substringAfterLast(":")
+
+fun String.getRequestAction(): String = this.substringAfter("request.").substringBefore(":")
+
+fun String.getRequestActionAssistantResponse(): String {
+    return when (this.getRequestAction()) {
+        "translation" -> {
+            "I'm proceeding with translation now..."
+        }
+        "list-of-words" -> {
+            "I'm collecting list of used words now..."
+        }
+        else -> {
+            "This action is unknown, I'm sorry I don't know how to proceed"
+        }
+    }
+}
+
+fun String.getRequestActionUserImplicitPrompt(message: String): String {
+    return when (this.getRequestAction()) {
+        "translation" -> {
+            "Please translate: $message"
+        }
+        "list-of-words" -> {
+            "Please give me the list of used words in this message: $message"
+        }
+        else -> {
+            "This action is unknown, I'm sorry I don't know how to proceed"
+        }
+    }
+}
+
 fun postOnboardingButtons(): ReplyMarkup = KeyboardReplyMarkup(
     keyboard = listOf(
         buttons.map { KeyboardButton(it) }
     )
 )
+
+fun String.isSettingsCallback(): Boolean = this.startsWith("settings")
+fun String.isRequestCallback(): Boolean = this.startsWith("request")
 
 fun String.isDifficultWordsSetting(): Boolean = this.startsWith("settings.difficult")
 

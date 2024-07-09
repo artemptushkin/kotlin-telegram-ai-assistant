@@ -25,16 +25,17 @@ fun Bot.sendMessageLoggingError(
         }
 }
 
-fun Bot.sendMessageMarkdownOrPlain(chat: ChatId.Id, message: String): TelegramBotResult<Message> {
+fun Bot.sendMessageMarkdownOrPlain(chat: ChatId.Id, message: String, replyMarkup: ReplyMarkup? = null): TelegramBotResult<Message> {
     val escapedMessage = escapeMarkdownV2Symbols.fold(message) { acc, symbol ->
         acc.replace(symbol.toString(), "\\$symbol")
     }
     val messageResult = sendMessageLoggingError(
         chat, escapedMessage,
-        ParseMode.MARKDOWN_V2
+        ParseMode.MARKDOWN_V2,
+        replyMarkup
     )
     return if (messageResult.isError) {
-        this.sendMessage(chat, message)
+        this.sendMessage(chat, message, replyMarkup = replyMarkup)
     } else {
         messageResult
     }

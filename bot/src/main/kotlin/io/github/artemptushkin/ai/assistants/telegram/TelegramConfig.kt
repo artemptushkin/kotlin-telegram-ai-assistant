@@ -12,6 +12,7 @@ import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.OpenAiHttpException
+import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.OnboardingDto
 import io.github.artemptushkin.ai.assistants.configuration.*
@@ -52,6 +53,7 @@ class TelegramConfiguration(
     private val historyService: TelegramHistoryService,
     private val learningWordsService: LearningWordsService,
     private val threadManagementService: ThreadManagementService,
+    private val assistantMessageProcessor: AssistantMessageProcessor,
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -69,6 +71,7 @@ class TelegramConfiguration(
                 telegramProperties,
                 openAiFunctions,
                 historyService,
+                assistantMessageProcessor,
                 runsServiceDispatcher()
             )
         val dispatcher = botCoroutineDispatcher()
@@ -104,33 +107,50 @@ class TelegramConfiguration(
                 callbackQuery {
                     val clientChat = callbackQuery.from.id.toChat()
                     val data = callbackQuery.data
-                    val contextKey = ContextKey.onboardingKey(clientChat, callbackQuery.from.id)
-                    val onboardingDto = chatContext.get(contextKey) as OnboardingDto
-                    if (onboardingDto.isAllSet()) {
-                        bot.sendMessage(
-                            clientChat,
-                            "The onboarding has been already finished, if you willing to do it again please run /start command.",
-                            replyMarkup = postOnboardingButtons()
-                        )
-                        return@callbackQuery
-                    }
-                    if (data.isDifficultWordsSetting()) {
-                        logger.debug("Received callback query with words difficult setting, user id ${callbackQuery.from.id}")
-                        val words = data.getDifficultWordsNumber()
-                        onboardingDto.wordsNumber = words
-                        chatContext.save(contextKey, onboardingDto)
-                    }
-                    if (onboardingDto.isAllSet()) {
-                        chatContext.delete(contextKey)
-                        val initialPrompt =
-                            initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
-                        val chatHistory = historyService.fetchChatHistory(clientChat.id.toString())
-                        if (chatHistory?.threadId != null) {
-                            logger.debug("Deleting the thread on the finished onboarding process")
-                            openAiService.deleteThread(chatHistory.threadId)
+                    if (data.isSettingsCallback()) {
+                        val contextKey = ContextKey.onboardingKey(clientChat, callbackQuery.from.id)
+                        val onboardingDto = chatContext.get(contextKey) as OnboardingDto
+                        if (onboardingDto.isAllSet()) {
+                            bot.sendMessage(
+                                clientChat,
+                                "The onboarding has been already finished, if you willing to do it again please run /start command.",
+                                replyMarkup = postOnboardingButtons()
+                            )
+                            return@callbackQuery
                         }
-                        threadManagementService.saveOnboardingThread(clientChat.id.toString(), chatHistory, initialPrompt)
-                        bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.")
+                        if (data.isDifficultWordsSetting()) {
+                            logger.debug("Received callback query with words difficult setting, user id ${callbackQuery.from.id}")
+                            val words = data.getDifficultWordsNumber()
+                            onboardingDto.wordsNumber = words
+                            chatContext.save(contextKey, onboardingDto)
+                        }
+                        if (onboardingDto.isAllSet()) {
+                            chatContext.delete(contextKey)
+                            val initialPrompt =
+                                initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
+                            val chatHistory = historyService.fetchChatHistory(clientChat.id.toString())
+                            if (chatHistory?.threadId != null) {
+                                logger.debug("Deleting the thread on the finished onboarding process")
+                                openAiService.deleteThread(chatHistory.threadId)
+                            }
+                            threadManagementService.saveOnboardingThread(clientChat.id.toString(), chatHistory, initialPrompt)
+                            bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.", replyMarkup = postOnboardingButtons())
+                        }
+                    } else if (data.isRequestCallback()) {
+                        val assistantCallbackResponse = data.getRequestActionAssistantResponse()
+                        bot.sendMessage(clientChat, assistantCallbackResponse)
+                        bot.sendChatAction(clientChat, ChatAction.TYPING)
+                        val message = historyService.fetchMessageById(clientChat.id.toString(), callbackQuery.message?.messageId!!)
+                        val ch = historyService.fetchChatHistory(clientChat.id.toString())
+                        if (message != null) {
+                            openAiService.createMessage(ch?.threadId!!, MessageRequest.builder()
+                                .role("user")
+                                .content(data.getRequestActionUserImplicitPrompt(message.text!!))
+                                .build())
+                            runService.createAndRun(bot, callbackQuery.message!!)
+                        } else {
+                            bot.sendMessage(clientChat, "I'm sorry I don't remember this message you clicked on")
+                        }
                     }
                 }
                 command("currentThread") {
@@ -198,7 +218,7 @@ class TelegramConfiguration(
                         val history = historyService.fetchChatHistory(chat.id.toString())
                         threadManagementService.deleteThreadIfAcceptable(chat.id.toString(), history)
                     }
-                    if (message.text != null && !message.isCommand() && !message.isButtonCommand()) {
+                    if (message.text != null && !message.isCommand() && !message.isBlockingButtonCommand()) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         val words = learningWordsService.getWords(TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
                         val threadId = chatHistory?.threadId
@@ -236,7 +256,7 @@ class TelegramConfiguration(
                                 "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
                             )
                         }
-                    } else if (message.isButtonCommand()) {
+                    } else if (message.isBlockingButtonCommand()) {
                         val clientChat = this.message.chatId()
                         if (chatHistory?.threadId == null) {
                             bot.sendMessageLoggingError(
@@ -252,10 +272,12 @@ class TelegramConfiguration(
                                 message.text!!
                             )
                             logger.debug("Open AI message created: ${openAiMessage.id}")
-                            val assistantText = if (message.text == "Add words") {
+                            val assistantText = if (message.text == "Add words") { // todo make it functional
                                 "Please type the list of words to add"
-                            } else {
+                            } else if (message.text == "Delete words") {
                                 "Please type the list of words to delete"
+                            } else {
+                                "Preparing a story \uD83D\uDCD6 for you" // todo it won't be here
                             }
                             bot.sendMessage(clientChat, assistantText)
                             val openAiAssistantMessage = openAiService.createMessage(
