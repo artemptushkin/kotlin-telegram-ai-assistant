@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants
+package io.github.artemptushkin.ai.assistants.telegram
 
 data class OnboardingDto(
     var wordsNumber: Int? = null,

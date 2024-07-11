@@ -4,9 +4,11 @@ import io.github.artemptushkin.ai.assistants.configuration.TelegramContext
 import kotlinx.coroutines.reactive.awaitFirstOrElse
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactor.awaitSingle
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 
 @Service
+@Profile("dutch")
 class LearningWordsService(
     private val learningWordsRepository: LearningWordsRepository,
 ) {

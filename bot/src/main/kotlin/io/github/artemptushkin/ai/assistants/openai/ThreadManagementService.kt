@@ -1,15 +1,13 @@
 package io.github.artemptushkin.ai.assistants.openai
 
 import com.github.kotlintelegrambot.entities.Message
+import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
+import io.github.artemptushkin.ai.assistants.configuration.OpenAiProperties
 import io.github.artemptushkin.ai.assistants.repository.ChatHistory
-import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.repository.toUserMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
-import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
-import io.github.artemptushkin.ai.assistants.words.LearningWords
-import io.github.artemptushkin.ai.assistants.words.userResponse
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
@@ -18,7 +16,7 @@ import org.springframework.stereotype.Service
 class ThreadManagementService(
     private val openAiService: OpenAiService,
     private val historyService: TelegramHistoryService,
-    private val telegramProperties: TelegramProperties,
+    private val openAiProperties: OpenAiProperties,
     @Qualifier("classToStrategy")
     private val classToStrategy: Map<String, ThreadCleanupStrategy>,
 ) {
@@ -37,18 +35,19 @@ class ThreadManagementService(
         }
         return chatHistory
     }
-    
-    suspend fun saveThread(clientChat: String, chatHistory: ChatHistory?, telegramMessage: Message, learningWords: LearningWords?): ChatHistory {
-        val initialSetOfWords = learningWords?.userResponse()?.toUserMessageRequest()
+
+    suspend fun saveThread(
+        clientChat: String,
+        chatHistory: ChatHistory?,
+        telegramMessage: Message,
+        initialMessages: List<MessageRequest>
+    ): ChatHistory {
         if (chatHistory == null) {
             logger.debug("Thread doesn't exist, creating a new one for user ${telegramMessage.from?.id}, no known history exists")
             val newThread = openAiService.createThread(
                 ThreadRequest
                     .builder()
-                    .messages(listOf(
-                        telegramMessage.toMessageRequest("user"),
-                        initialSetOfWords
-                    ))
+                    .messages(initialMessages)
                     .build()
             )
             return historyService.saveThread(
@@ -59,15 +58,14 @@ class ThreadManagementService(
                 logger.debug("Thread created")
             }
         } else {
-            logger.debug("Thread doesn't exist, creating a new one for user ${telegramMessage.from?.id} attaching the initial prompt and initial set of words")
+            logger.debug("Thread doesn't exist, creating a new one for user ${telegramMessage.from?.id} attaching the initial prompt and set of initial messages")
+            val messages = mutableListOf(chatHistory.initialPrompt?.toUserMessageRequest()).also {
+                it.addAll(initialMessages)
+            }
             val newThread = openAiService.createThread(
                 ThreadRequest
                     .builder()
-                    .messages(listOf(
-                        chatHistory.initialPrompt?.toUserMessageRequest(),
-                        initialSetOfWords,
-                        telegramMessage.toMessageRequest("user"),
-                    ))
+                    .messages(messages)
                     .build()
             )
             return historyService.saveThread(chatHistory, newThread)
@@ -76,8 +74,12 @@ class ThreadManagementService(
                 }
         }
     }
-    
-    suspend fun saveOnboardingThread(clientChat: String, chatHistory: ChatHistory?, initialPrompt: String): ChatHistory {
+
+    suspend fun saveOnboardingThread(
+        clientChat: String,
+        chatHistory: ChatHistory?,
+        initialPrompt: String
+    ): ChatHistory {
         val newThread = openAiService.createThread(
             ThreadRequest
                 .builder()
@@ -97,7 +99,7 @@ class ThreadManagementService(
     }
 
     private fun resolveStrategies(): List<ThreadCleanupStrategy> {
-        return telegramProperties.bot.openAi.threadCleanupStrategies?.mapNotNull {
+        return openAiProperties.threadCleanupStrategies?.mapNotNull {
             classToStrategy[it]
         } ?: emptyList()
     }

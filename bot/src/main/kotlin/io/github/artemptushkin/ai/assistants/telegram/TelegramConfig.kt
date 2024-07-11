@@ -7,34 +7,28 @@ import com.github.kotlintelegrambot.dispatcher.callbackQuery
 import com.github.kotlintelegrambot.dispatcher.command
 import com.github.kotlintelegrambot.dispatcher.message
 import com.github.kotlintelegrambot.entities.ChatAction
-import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.OpenAiHttpException
 import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.service.OpenAiService
-import io.github.artemptushkin.ai.assistants.OnboardingDto
 import io.github.artemptushkin.ai.assistants.configuration.*
+import io.github.artemptushkin.ai.assistants.openai.LongMemoryService
 import io.github.artemptushkin.ai.assistants.openai.ThreadManagementService
-import io.github.artemptushkin.ai.assistants.repository.ChatMessage
 import io.github.artemptushkin.ai.assistants.repository.toAssistantMessageRequest
-import io.github.artemptushkin.ai.assistants.repository.toMessage
 import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.conversation.*
-import io.github.artemptushkin.ai.assistants.words.LearningWordsService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
 import org.springframework.core.env.Profiles
 import java.util.concurrent.Executors
-
 
 fun botCoroutineDispatcher(): CoroutineDispatcher = Executors.newFixedThreadPool(
     Runtime.getRuntime().availableProcessors()
@@ -48,12 +42,14 @@ fun openAiRunsListenerDispatcher(): CoroutineDispatcher = Executors.newFixedThre
 @EnableConfigurationProperties(value = [TelegramProperties::class])
 class TelegramConfiguration(
     private val telegramProperties: TelegramProperties,
+    private val openAiProperties: OpenAiProperties,
     private val chatContext: ChatContext,
     private val environment: Environment,
     private val historyService: TelegramHistoryService,
-    private val learningWordsService: LearningWordsService,
     private val threadManagementService: ThreadManagementService,
     private val assistantMessageProcessor: AssistantMessageProcessor,
+    private val contextFactory: ContextFactory,
+    private val longMemoryService: LongMemoryService,
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -68,7 +64,8 @@ class TelegramConfiguration(
             RunService(
                 openAiService,
                 chatContext,
-                telegramProperties,
+                contextFactory,
+                openAiProperties,
                 openAiFunctions,
                 historyService,
                 assistantMessageProcessor,
@@ -114,7 +111,7 @@ class TelegramConfiguration(
                             bot.sendMessage(
                                 clientChat,
                                 "The onboarding has been already finished, if you willing to do it again please run /start command.",
-                                replyMarkup = postOnboardingButtons()
+                                replyMarkup = postOnboardingButtons(telegramProperties)
                             )
                             return@callbackQuery
                         }
@@ -134,7 +131,7 @@ class TelegramConfiguration(
                                 openAiService.deleteThread(chatHistory.threadId)
                             }
                             threadManagementService.saveOnboardingThread(clientChat.id.toString(), chatHistory, initialPrompt)
-                            bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.", replyMarkup = postOnboardingButtons())
+                            bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.", replyMarkup = postOnboardingButtons(telegramProperties))
                         }
                     } else if (data.isRequestCallback()) {
                         val assistantCallbackResponse = data.getRequestActionAssistantResponse()
@@ -193,8 +190,7 @@ class TelegramConfiguration(
                     }
                     historyService.clearHistoryById(chat.id.toString())
                     logger.debug("Thread history has been cleared ${chat.id}")
-                    learningWordsService.deleteAll(TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
-                    logger.debug("Learning words has been cleared ${chat.id}")
+                    longMemoryService.forget(contextFactory.buildContext(chat.id.toString()))
                 }
                 command("run") {
                     runService.createAndRun(bot, message)
@@ -218,12 +214,12 @@ class TelegramConfiguration(
                         val history = historyService.fetchChatHistory(chat.id.toString())
                         threadManagementService.deleteThreadIfAcceptable(chat.id.toString(), history)
                     }
-                    if (message.text != null && !message.isCommand() && !message.isBlockingButtonCommand()) {
+                    if (message.text != null && !message.isCommand() && !message.isBlockingButtonCommand(telegramProperties.bot.buttons)) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
-                        val words = learningWordsService.getWords(TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
+                        val memoryMessages = longMemoryService.getMemory(contextFactory.buildContext(chat.id.toString()))
                         val threadId = chatHistory?.threadId
                         if (threadId == null) {
-                            threadManagementService.saveThread(chat.id.toString(), chatHistory, message, words)
+                            threadManagementService.saveThread(chat.id.toString(), chatHistory, message, memoryMessages)
                         } else {
                             logger.debug("Creating a new message on the existent thread $threadId")
                             try {
@@ -256,7 +252,7 @@ class TelegramConfiguration(
                                 "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
                             )
                         }
-                    } else if (message.isBlockingButtonCommand()) {
+                    } else if (message.isBlockingButtonCommand(telegramProperties.bot.buttons)) {
                         val clientChat = this.message.chatId()
                         if (chatHistory?.threadId == null) {
                             bot.sendMessageLoggingError(
@@ -272,13 +268,7 @@ class TelegramConfiguration(
                                 message.text!!
                             )
                             logger.debug("Open AI message created: ${openAiMessage.id}")
-                            val assistantText = if (message.text == "Add words") { // todo make it functional
-                                "Please type the list of words to add"
-                            } else if (message.text == "Delete words") {
-                                "Please type the list of words to delete"
-                            } else {
-                                "Preparing a story \uD83D\uDCD6 for you" // todo it won't be here
-                            }
+                            val assistantText = ButtonFunctions.buttonToFunction[message.text]!!
                             bot.sendMessage(clientChat, assistantText)
                             val openAiAssistantMessage = openAiService.createMessage(
                                 chatHistory.threadId, assistantText.toAssistantMessageRequest()
@@ -299,39 +289,7 @@ class TelegramConfiguration(
         }
     }
 
-    private fun populateCurrentMessageIfNotExists(
-        savedMessages: MutableList<ChatMessage>?,
-        message: Message
-    ): MutableList<ChatMessage>? {
-        if (savedMessages != null && savedMessages.none { it.id == message.messageId }) {
-            savedMessages.add(message.toMessage())
-        }
-        return savedMessages
-    }
-
     companion object {
         val logger = LoggerFactory.getLogger(TelegramConfiguration::class.java)!!
     }
 }
-
-@ConfigurationProperties("telegram")
-data class TelegramProperties(
-    val bot: BotProperties = BotProperties(),
-    val webhook: WebHookProperties = WebHookProperties()
-)
-
-data class OpenAiProperties(
-    val threadCleanupStrategies: List<String>? = null // canonical class names
-)
-
-data class WebHookProperties(
-    val url: String? = null,
-    val secretToken: String? = null
-)
-
-data class BotProperties(
-    val token: String = "",
-    val helpMessage: String = "",
-    val assistantId: String = "", // todo move to open ai properties
-    val openAi: OpenAiProperties = OpenAiProperties()
-)

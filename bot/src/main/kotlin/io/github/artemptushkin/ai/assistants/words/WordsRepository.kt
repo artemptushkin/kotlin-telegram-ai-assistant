@@ -3,11 +3,14 @@ package io.github.artemptushkin.ai.assistants.words
 import com.google.cloud.firestore.annotation.DocumentId
 import com.google.cloud.spring.data.firestore.Document
 import com.google.cloud.spring.data.firestore.FirestoreReactiveRepository
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Repository
 
 @Repository
+@Profile("dutch")
 interface LearningWordsRepository : FirestoreReactiveRepository<LearningWords>
 
+@Profile("dutch")
 @Document(collectionName = "learning-words")
 data class LearningWords(
     @DocumentId

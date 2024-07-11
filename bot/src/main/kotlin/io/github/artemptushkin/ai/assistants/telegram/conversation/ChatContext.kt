@@ -1,7 +1,7 @@
 package io.github.artemptushkin.ai.assistants.telegram.conversation
 
 import com.github.kotlintelegrambot.entities.ChatId
-import io.github.artemptushkin.ai.assistants.OnboardingDto
+import io.github.artemptushkin.ai.assistants.telegram.OnboardingDto
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass

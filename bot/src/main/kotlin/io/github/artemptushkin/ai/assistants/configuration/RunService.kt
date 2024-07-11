@@ -21,7 +21,8 @@ import kotlin.time.Duration
 class RunService(
     private val openAiService: OpenAiService,
     private val chatContext: ChatContext,
-    private val telegramProperties: TelegramProperties,
+    private val contextFactory: ContextFactory,
+    private val openAiProperties: OpenAiProperties,
     private val openAiFunctions: Map<String, OpenAiFunction>,
     private val historyService: TelegramHistoryService,
     private val assistantMessageProcessor: AssistantMessageProcessor,
@@ -40,7 +41,7 @@ class RunService(
             val run = openAiService.createRun(
                 currentThreadId, RunCreateRequest
                     .builder()
-                    .assistantId(telegramProperties.bot.assistantId)
+                    .assistantId(openAiProperties.assistantId)
                     .build()
             ) // todo it can shoot timeout from here
             chatContext.save(ContextKey.run(chat), run)
@@ -131,7 +132,7 @@ class RunService(
                                                 .let {
                                                     if (it != null) {
                                                         logger.debug("Executing function '${it.name()}'")
-                                                        val result = it.handle(rawArgs, TelegramContext(telegramProperties.bot.token.substringBefore(":"), chat.id.toString(), hashMapOf("language" to "Dutch")))
+                                                        val result = it.handle(rawArgs, contextFactory.buildContext(chat.id.toString()))
                                                         logger.info("Submitting tool outputs, thread: $currentThreadId, run: ${run.id}")
                                                         SubmitToolOutputRequestItem
                                                             .builder()

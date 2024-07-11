@@ -6,10 +6,12 @@ import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.TelegramContext
 import io.github.artemptushkin.ai.assistants.http.OpenAiHttpClient.Companion.logger
 import kotlinx.coroutines.runBlocking
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 
 @Component
+@Profile("dutch")
 class AddWordsFunction(
     private val objectMapper: ObjectMapper,
     private val learningWordsService: LearningWordsService,
@@ -34,6 +36,7 @@ class AddWordsFunction(
 }
 
 @Component
+@Profile("dutch")
 class DeleteWordsFunction(
     private val objectMapper: ObjectMapper,
     private val learningWordsService: LearningWordsService,
@@ -56,6 +59,7 @@ class DeleteWordsFunction(
 }
 
 @Component
+@Profile("dutch")
 class GetWordsFunction(
     private val learningWordsService: LearningWordsService,
 ) : OpenAiFunction {

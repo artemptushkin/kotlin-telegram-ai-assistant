@@ -1,12 +1,8 @@
 package io.github.artemptushkin.ai.assistants.configuration
 
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
-import com.github.kotlintelegrambot.entities.KeyboardReplyMarkup
 import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import com.github.kotlintelegrambot.entities.keyboard.KeyboardButton
-
-val buttons = listOf("Add words", "Delete words", "Create a story")
 
 fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     listOf(
@@ -54,12 +50,6 @@ fun String.getRequestActionUserImplicitPrompt(message: String): String {
         }
     }
 }
-
-fun postOnboardingButtons(): ReplyMarkup = KeyboardReplyMarkup(
-    keyboard = listOf(
-        buttons.map { KeyboardButton(it) }
-    )
-)
 
 fun String.isSettingsCallback(): Boolean = this.startsWith("settings")
 fun String.isRequestCallback(): Boolean = this.startsWith("request")
