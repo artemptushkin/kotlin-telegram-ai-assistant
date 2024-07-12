@@ -14,10 +14,11 @@ class DutchLongMemoryService(
     private val learningWordsService: LearningWordsService,
 ) : LongMemoryService {
     override suspend fun getMemory(telegramContext: TelegramContext): List<MessageRequest> {
-        return listOfNotNull(
-            learningWordsService.getWords(telegramContext)
-                ?.userResponse()?.toUserMessageRequest()
-        )
+        val l = learningWordsService.getWords(telegramContext)
+        if (l?.words?.isNotEmpty() == true) {
+            return listOfNotNull(l.userResponse().toUserMessageRequest())
+        }
+        return emptyList()
     }
 
     override suspend fun forget(telegramContext: TelegramContext) {

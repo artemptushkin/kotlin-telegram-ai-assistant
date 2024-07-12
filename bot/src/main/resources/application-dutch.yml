@@ -1,0 +1,14 @@
+telegram:
+  bot:
+    metadata:
+      language: Dutch
+    buttons:
+      - id: add-words
+        text: "Add words"
+        isBlocking: true
+      - id: delete-workds
+        text: "Delete words"
+        isBlocking: true
+      - id: create-story
+        text: "Create story"
+        isBlocking: false

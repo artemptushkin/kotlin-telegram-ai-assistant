@@ -30,6 +30,7 @@ class ThreadManagementService(
             return chatHistory
         }
         if (strategies.any { it.isAcceptableForCleanup(chatHistory) }) {
+            logger.debug("Deleting the thread ${chatHistory.threadId}")
             openAiService.deleteThread(chatHistory.threadId)
             return historyService.clearHistoryById(chatHistory.id!!)
         }

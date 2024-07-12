@@ -10,10 +10,10 @@ const val buttonNotations = "### buttons ###"
 class AssistantMessageProcessor {
 
     fun format(messageText: String): AssistantMessage {
-        if (messageText.contains(buttonNotations)) {
-            return AssistantMessage(messageText.removeNotations(), dutchStoriesInlineButtons()) // todo if we have someone else besides Dutch button it must be refactored
+        return if (messageText.contains(buttonNotations)) {
+            AssistantMessage(messageText.removeNotations(), dutchStoriesInlineButtons()) // todo if we have someone else besides Dutch button it must be refactored
         } else {
-            return AssistantMessage(messageText)
+            AssistantMessage(messageText)
         }
     }
 }

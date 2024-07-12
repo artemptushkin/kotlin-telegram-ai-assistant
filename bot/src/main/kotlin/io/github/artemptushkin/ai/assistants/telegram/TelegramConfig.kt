@@ -216,9 +216,9 @@ class TelegramConfiguration(
                     }
                     if (message.text != null && !message.isCommand() && !message.isBlockingButtonCommand(telegramProperties.bot.buttons)) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
-                        val memoryMessages = longMemoryService.getMemory(contextFactory.buildContext(chat.id.toString()))
                         val threadId = chatHistory?.threadId
                         if (threadId == null) {
+                            val memoryMessages = longMemoryService.getMemory(contextFactory.buildContext(chat.id.toString()))
                             threadManagementService.saveThread(chat.id.toString(), chatHistory, message, memoryMessages)
                         } else {
                             logger.debug("Creating a new message on the existent thread $threadId")

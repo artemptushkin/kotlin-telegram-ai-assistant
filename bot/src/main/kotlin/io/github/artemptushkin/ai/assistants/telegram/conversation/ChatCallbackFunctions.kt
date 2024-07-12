@@ -19,10 +19,5 @@ fun Long.toChat() = ChatId.fromId(this)
 
 fun Message.isCommand(): Boolean = text?.startsWith("/") ?: false
 
-fun Message.isBlockingButtonCommand(buttons: List<Button>): Boolean =
-    isButtonCommand(buttons) && buttons.any { it.isBlocking }
-
-fun Message.isButtonCommand(buttons: List<Button>): Boolean = if (this.text != null) {
-    buttons.any { this.text == it.text }
-} else false
+fun Message.isBlockingButtonCommand(buttons: List<Button>): Boolean = buttons.firstOrNull { this.text == it.text }?.isBlocking ?: false
 
