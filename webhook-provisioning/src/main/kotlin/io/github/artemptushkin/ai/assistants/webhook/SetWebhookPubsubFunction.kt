@@ -17,7 +17,7 @@ class SetWebhookPubsubFunction : BackgroundFunction<PubsubMessage> {
         {
             "url": "${System.getenv("TELEGRAM_WEBHOOK_URL")}",
             "secret_token": "${System.getenv("WEBHOOK_TOKEN")}",
-            "allowed_updates": ["message"],
+            "allowed_updates": ["message", "callback_query"],
             "max_connections": 80
         }
     """.trimIndent()
