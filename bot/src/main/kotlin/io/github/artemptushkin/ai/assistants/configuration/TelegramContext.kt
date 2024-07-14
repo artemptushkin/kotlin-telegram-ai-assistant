@@ -9,7 +9,7 @@ class ContextFactory(
 ) {
     fun buildContext(chatId: String): TelegramContext = TelegramContext(
         chatId = chatId,
-        botId = telegramProperties.bot.token,
+        botId = telegramProperties.bot.token.substringBefore(":"),
         metadata = telegramProperties.bot.metadata,
     )
 }

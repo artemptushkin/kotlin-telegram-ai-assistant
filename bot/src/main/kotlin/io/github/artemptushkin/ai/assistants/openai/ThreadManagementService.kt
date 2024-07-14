@@ -26,7 +26,7 @@ class ThreadManagementService(
         }
         val strategies = resolveStrategies()
         if (strategies.isEmpty()) {
-            logger.error("No strategies have not been registered! Thread can not be deleted!")
+            logger.error("No strategies have been registered! Thread can not be deleted!")
             return chatHistory
         }
         if (strategies.any { it.isAcceptableForCleanup(chatHistory) }) {
@@ -66,7 +66,7 @@ class ThreadManagementService(
             val newThread = openAiService.createThread(
                 ThreadRequest
                     .builder()
-                    .messages(messages)
+                    .messages(messages.filterNotNull())
                     .build()
             )
             return historyService.saveThread(chatHistory, newThread)
@@ -100,6 +100,8 @@ class ThreadManagementService(
     }
 
     private fun resolveStrategies(): List<ThreadCleanupStrategy> {
+        logger.trace("I know strategies: ${openAiProperties.threadCleanupStrategies?.joinToString() }}")
+        logger.trace("Registered strategies beans: $classToStrategy")
         return openAiProperties.threadCleanupStrategies?.mapNotNull {
             classToStrategy[it]
         } ?: emptyList()

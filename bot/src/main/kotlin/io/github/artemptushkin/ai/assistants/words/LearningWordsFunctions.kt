@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
 import io.github.artemptushkin.ai.assistants.configuration.TelegramContext
-import io.github.artemptushkin.ai.assistants.http.OpenAiHttpClient.Companion.logger
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
@@ -33,6 +33,10 @@ class AddWordsFunction(
 
     override fun name(): String = "add-words"
 
+    companion object {
+        val logger = LoggerFactory.getLogger(AddWordsFunction::class.java)!!
+    }
+
 }
 
 @Component
@@ -56,6 +60,10 @@ class DeleteWordsFunction(
     }
 
     override fun name(): String = "delete-words"
+
+    companion object {
+        val logger = LoggerFactory.getLogger(DeleteWordsFunction::class.java)!!
+    }
 }
 
 @Component
@@ -66,9 +74,10 @@ class GetWordsFunction(
     override fun handle(from: JsonNode, telegramContext: TelegramContext): String {
         return runBlocking {
             try {
-                learningWordsService
+                val response = learningWordsService
                     .getWords(telegramContext)
                     ?.responseToAssistant() ?: "No words found, please add some words"
+                return@runBlocking response.also { logger.info("Fetched the following words: $it") }
             } catch (e: Exception) {
                 logger.error("Exception handled during ${name()} function", e)
                 "Exception handled during the HTTP call. Assistant should evaluate the following error message: ${e.message}. Assistant should repeat the function execution if possible. If it's not possible then assistant should respond to user they should contact the administrator at art.ptushkin@gmail.com"
@@ -77,4 +86,8 @@ class GetWordsFunction(
     }
 
     override fun name(): String = "get-words"
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(GetWordsFunction::class.java)!!
+    }
 }

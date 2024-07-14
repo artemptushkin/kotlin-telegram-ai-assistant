@@ -14,9 +14,15 @@ interface ThreadCleanupStrategy {
 class NewDayStrategy : ThreadCleanupStrategy {
     override fun isAcceptableForCleanup(history: ChatHistory): Boolean {
         return run {
-            val result = history.getLatestMessageDate()?.isBefore(LocalDate.now()) == true
-            logger.debug("Thread ${history.threadId} defined as a clean up candidate based on a new date")
-            result
+            val latestMessageDate = history.getLatestMessageDate()
+            if (latestMessageDate != null) {
+                val result = latestMessageDate.isBefore(LocalDate.now())
+                if (result) {
+                    logger.debug("Thread ${history.threadId} defined as a clean up candidate based on a new date")
+                }
+                return@run result
+            }
+            return@run false
         }
     }
 

@@ -38,6 +38,6 @@ class OpenAiHttpClient(
     }
 
     companion object {
-        val logger = LoggerFactory.getLogger(OpenAiHttpClient::class.java)!!
+        private val logger = LoggerFactory.getLogger(OpenAiHttpClient::class.java)!!
     }
 }

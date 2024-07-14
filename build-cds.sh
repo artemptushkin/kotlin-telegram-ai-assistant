@@ -3,13 +3,15 @@
 IMAGE_TAG=$(date +%s)
 IMAGE_TARGET_TAG=latest
 
+mkdir -p ./bot/build/libs/cds
+
 echo "Building the prebuild image, the tag is: $IMAGE_TAG"
-./gradlew jibDockerBuild -Djib.to.image=ai-telegram-assistants-prebuild -Djib.to.tags=$IMAGE_TAG
+SPRING_PROFILES_ACTIVE=prod,webhook,cloud,dutch ./gradlew assemble jibDockerBuild -Djib.to.image=ai-telegram-assistants-prebuild -Djib.to.tags=$IMAGE_TAG
 
 mkdir -p ${PWD}/bot/build/libs/cds
 
 echo "Running the prebuild image to prepare the CDS archive"
-docker run -w /app -ti --entrypoint=/opt/java/openjdk/bin/java \
+docker run -w /app -ti -e SPRING_PROFILES_ACTIVE=prod,webhook,cloud,dutch --entrypoint=/opt/java/openjdk/bin/java \
   -v ${PWD}/bot/build/libs/cds:/cds ai-telegram-assistants-prebuild:$IMAGE_TAG -XX:ArchiveClassesAtExit=/cds/application.jsa \
   -Dspring.context.exit=onRefresh \
   -cp "@jib-classpath-file" io.github.artemptushkin.ai.assistants.AiTelegramAssistantsApplicationKt || true
