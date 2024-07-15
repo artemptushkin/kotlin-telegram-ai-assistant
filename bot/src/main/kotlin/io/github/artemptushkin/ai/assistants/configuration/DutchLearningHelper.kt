@@ -3,6 +3,12 @@ package io.github.artemptushkin.ai.assistants.configuration
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
+import io.github.artemptushkin.ai.assistants.telegram.buttonNotations
+
+val buttonsToCallbackData = mapOf(
+    "Translation" to "request.translation",
+    "List of words" to "request.list-of-words",
+)
 
 fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     listOf(
@@ -12,11 +18,15 @@ fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     )
 )
 
-fun dutchStoriesInlineButtons(): InlineKeyboardMarkup = InlineKeyboardMarkup.create(
-    listOf(
-        InlineKeyboardButton.CallbackData("Translation", "request.translation"),
-        InlineKeyboardButton.CallbackData("List of words", "request.list-of-words"),
-    )
+fun String.parseButtons(): List<String> = this
+    .substringAfter(buttonNotations)
+    .substringBefore(buttonNotations)
+    .split('\n')
+    .map(String::trim)
+    .filter { it.isNotBlank() && it.length > 2 }
+
+fun List<String>.buttonsToLayout(): InlineKeyboardMarkup = InlineKeyboardMarkup.create(
+    this.map { InlineKeyboardButton.CallbackData(it, buttonsToCallbackData[it]!!) }
 )
 
 fun String.getMessageIdFromCallback(): String = this.substringAfterLast(":")
