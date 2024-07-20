@@ -6,6 +6,7 @@ import com.theokanning.openai.assistants.thread.ThreadRequest
 import com.theokanning.openai.service.OpenAiService
 import io.github.artemptushkin.ai.assistants.configuration.OpenAiProperties
 import io.github.artemptushkin.ai.assistants.repository.ChatHistory
+import io.github.artemptushkin.ai.assistants.repository.toMessageRequest
 import io.github.artemptushkin.ai.assistants.repository.toUserMessageRequest
 import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
 import org.slf4j.LoggerFactory
@@ -45,10 +46,13 @@ class ThreadManagementService(
     ): ChatHistory {
         if (chatHistory == null) {
             logger.debug("Thread doesn't exist, creating a new one for user ${telegramMessage.from?.id}, no known history exists")
+            val messages = mutableListOf(telegramMessage.toMessageRequest("user")).also {
+                it.addAll(initialMessages)
+            }
             val newThread = openAiService.createThread(
                 ThreadRequest
                     .builder()
-                    .messages(initialMessages)
+                    .messages(messages)
                     .build()
             )
             return historyService.saveThread(
@@ -62,6 +66,7 @@ class ThreadManagementService(
             logger.debug("Thread doesn't exist, creating a new one for user ${telegramMessage.from?.id} attaching the initial prompt and set of initial messages")
             val messages = mutableListOf(chatHistory.initialPrompt?.toUserMessageRequest()).also {
                 it.addAll(initialMessages)
+                it.add(telegramMessage.toMessageRequest("user"))
             }
             val newThread = openAiService.createThread(
                 ThreadRequest

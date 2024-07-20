@@ -41,6 +41,6 @@ fun Bot.sendMessageMarkdownOrPlain(chat: ChatId.Id, message: String, replyMarkup
     }
 }
 
-private val escapeMarkdownV2Symbols = listOf('_', '-', "*", "(", ")", ".", "!", "[", "]", "`")
+private val escapeMarkdownV2Symbols = listOf('_', '-', "*", "(", ")", ".", "!", "[", "]", "`", "#")
 
 private val logger = LoggerFactory.getLogger("io.github.artemptushkin.ai.assistants.telegram.BotHelper")
