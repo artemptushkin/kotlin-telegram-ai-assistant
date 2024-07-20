@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -euo pipefail
+
 IMAGE_TAG=$(date +%s)
 IMAGE_TARGET_TAG=latest
 
