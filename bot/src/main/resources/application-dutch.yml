@@ -8,9 +8,20 @@ telegram:
       - id: add-words
         text: "Add words"
         isBlocking: true
+        assistantText: "Please type the list of words to add"
       - id: delete-workds
         text: "Delete words"
         isBlocking: true
+        assistantText: "Please type the list of words to delete"
       - id: create-story
         text: "Create story"
         isBlocking: false
+        assistantText: "Preparing a story \uD83D\uDCD6 for you"
+      - id: practice-words-du-en
+        text: "Practice words Dutch to English"
+        isBlocking: false
+        assistantText: "Preparing a set of words with translations to practice"
+      - id: practice-words-en-du
+        text: "Practice words English to Dutch"
+        isBlocking: false
+        assistantText: "Preparing a set of words with translations to practice"

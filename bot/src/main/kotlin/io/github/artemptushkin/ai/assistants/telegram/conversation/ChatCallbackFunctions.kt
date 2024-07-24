@@ -19,5 +19,6 @@ fun Long.toChat() = ChatId.fromId(this)
 
 fun Message.isCommand(): Boolean = text?.startsWith("/") ?: false
 
-fun Message.isBlockingButtonCommand(buttons: List<Button>): Boolean = buttons.firstOrNull { this.text == it.text }?.isBlocking ?: false
+fun Message.toButton(telegramProperties: TelegramProperties): Button =
+    telegramProperties.bot.buttons.first { this.text == it.text }
 

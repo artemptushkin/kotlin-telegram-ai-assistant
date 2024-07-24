@@ -25,7 +25,8 @@ data class BotProperties(
 data class Button(
     val id: String,
     val text: String,
-    val isBlocking: Boolean = false
+    val isBlocking: Boolean = false,
+    val assistantText: String,
 )
 
 fun BotProperties.id() = this.token.substringBefore(":")

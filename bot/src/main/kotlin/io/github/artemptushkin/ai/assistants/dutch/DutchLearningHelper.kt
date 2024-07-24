@@ -52,7 +52,7 @@ fun String.getRequestActionUserImplicitPrompt(message: String): String {
             "Please translate: $message"
         }
         "list-of-words" -> {
-            "Please give me the list of used words in this message: $message"
+            "Please give me the list of used words with their translations in this message: $message"
         }
         else -> {
             "This action is unknown, I'm sorry I don't know how to proceed"
@@ -74,8 +74,8 @@ fun initialDutchLearnerPrompt(wordsNumber: Int) = """
     Your message must have only a story, no additional sentences or questions.
     After that, I could ask you to give me a translation and the list of used words. I will also ask you to practice words.
     If I ask “Practice words Dutch to English” you should give me a list of $wordsNumber randomly chosen words
-    from the list in format word in Dutch - word in English, word in English should be hidden using telegram spoiler markdown.
+    from the list in format word in Dutch - word in English.
     If I ask “Practice words English to Dutch” you should give me a list of $wordsNumber randomly chosen words
-    from the list in format word in English - word in Dutch, word in Dutch should be hidden using telegram spoiler markdown.
+    from the list in format word in English - word in Dutch.
     I could also ask you to delete some words and add new words.
 """.trimIndent()
