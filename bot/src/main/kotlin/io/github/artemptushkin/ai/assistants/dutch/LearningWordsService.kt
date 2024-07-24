@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants.words
+package io.github.artemptushkin.ai.assistants.dutch
 
 import io.github.artemptushkin.ai.assistants.configuration.TelegramContext
 import kotlinx.coroutines.reactive.awaitFirstOrElse

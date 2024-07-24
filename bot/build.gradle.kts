@@ -48,6 +48,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("com.tngtech.archunit:archunit:1.3.0")
 }
 
 tasks.withType<KotlinCompile> {

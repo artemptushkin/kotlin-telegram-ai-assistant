@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants.words
+package io.github.artemptushkin.ai.assistants.dutch
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper

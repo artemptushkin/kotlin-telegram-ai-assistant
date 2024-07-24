@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants.words
+package io.github.artemptushkin.ai.assistants.dutch
 
 import com.google.cloud.firestore.annotation.DocumentId
 import com.google.cloud.spring.data.firestore.Document

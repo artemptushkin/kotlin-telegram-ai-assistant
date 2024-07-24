@@ -1,5 +1,7 @@
 telegram:
   bot:
+    isOnboardingEnabled: true
+    startMessage: "Hi! I will help you learn Dutch! Let’s choose your training level."
     metadata:
       language: Dutch
     buttons:

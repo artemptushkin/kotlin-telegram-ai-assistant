@@ -1,6 +1,7 @@
 package io.github.artemptushkin.ai.assistants.configuration
 
 import io.github.artemptushkin.ai.assistants.telegram.TelegramProperties
+import io.github.artemptushkin.ai.assistants.telegram.id
 import org.springframework.stereotype.Component
 
 @Component
@@ -9,7 +10,7 @@ class ContextFactory(
 ) {
     fun buildContext(chatId: String): TelegramContext = TelegramContext(
         chatId = chatId,
-        botId = telegramProperties.bot.token.substringBefore(":"),
+        botId = telegramProperties.bot.id(),
         metadata = telegramProperties.bot.metadata,
     )
 }

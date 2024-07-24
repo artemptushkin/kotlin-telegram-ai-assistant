@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants.words
+package io.github.artemptushkin.ai.assistants.dutch
 
 sealed class WordsUpdateRequest(
     val words: List<String>

@@ -11,9 +11,12 @@ import com.github.kotlintelegrambot.logging.LogLevel
 import com.github.kotlintelegrambot.webhook
 import com.theokanning.openai.ListSearchParameters
 import com.theokanning.openai.OpenAiHttpException
-import com.theokanning.openai.assistants.message.MessageRequest
 import com.theokanning.openai.service.OpenAiService
-import io.github.artemptushkin.ai.assistants.configuration.*
+import io.github.artemptushkin.ai.assistants.configuration.ContextFactory
+import io.github.artemptushkin.ai.assistants.configuration.OpenAiFunction
+import io.github.artemptushkin.ai.assistants.configuration.OpenAiProperties
+import io.github.artemptushkin.ai.assistants.configuration.RunService
+import io.github.artemptushkin.ai.assistants.openai.AssistantMessageProcessor
 import io.github.artemptushkin.ai.assistants.openai.LongMemoryService
 import io.github.artemptushkin.ai.assistants.openai.ThreadManagementService
 import io.github.artemptushkin.ai.assistants.repository.toAssistantMessageRequest
@@ -50,6 +53,8 @@ class TelegramConfiguration(
     private val assistantMessageProcessor: AssistantMessageProcessor,
     private val contextFactory: ContextFactory,
     private val longMemoryService: LongMemoryService,
+    private val onboardingService: OnboardingService,
+    private val callbacksHandler: CallbacksHandler
 ) {
     @Bean
     fun runsServiceDispatcher() = openAiRunsListenerDispatcher()
@@ -96,59 +101,15 @@ class TelegramConfiguration(
                     val chat = this.message.chatId()
                     bot.sendMessageLoggingError(
                         chat,
-                        "Hi! I will help you learn Dutch! Let’s choose your training level.",
-                        replyMarkup = settingsInlineButtons()
+                        telegramProperties.bot.startMessage,
+                        replyMarkup = if (telegramProperties.bot.isOnboardingEnabled) onboardingService.onboardingInlineButtons() else null
                     )
-                    chatContext.save(ContextKey.onboardingKey(chat, message.from!!.id), OnboardingDto())
+                    if (telegramProperties.bot.isOnboardingEnabled) {
+                        chatContext.save(ContextKey.onboardingKey(chat, message.from!!.id), OnboardingDto())
+                    }
                 }
                 callbackQuery {
-                    val clientChat = callbackQuery.from.id.toChat()
-                    val data = callbackQuery.data
-                    if (data.isSettingsCallback()) {
-                        val contextKey = ContextKey.onboardingKey(clientChat, callbackQuery.from.id)
-                        val onboardingDto = chatContext.get(contextKey) as OnboardingDto
-                        if (onboardingDto.isAllSet()) {
-                            bot.sendMessage(
-                                clientChat,
-                                "The onboarding has been already finished, if you willing to do it again please run /start command.",
-                                replyMarkup = postOnboardingButtons(telegramProperties)
-                            )
-                            return@callbackQuery
-                        }
-                        if (data.isDifficultWordsSetting()) {
-                            logger.debug("Received callback query with words difficult setting, user id ${callbackQuery.from.id}")
-                            val words = data.getDifficultWordsNumber()
-                            onboardingDto.wordsNumber = words
-                            chatContext.save(contextKey, onboardingDto)
-                        }
-                        if (onboardingDto.isAllSet()) {
-                            chatContext.delete(contextKey)
-                            val initialPrompt =
-                                initialDutchLearnerPrompt(onboardingDto.wordsNumber!!) // todo it should come from bot configuration
-                            val chatHistory = historyService.fetchChatHistory(clientChat.id.toString())
-                            if (chatHistory?.threadId != null) {
-                                logger.debug("Deleting the thread on the finished onboarding process")
-                                openAiService.deleteThread(chatHistory.threadId)
-                            }
-                            threadManagementService.saveOnboardingThread(clientChat.id.toString(), chatHistory, initialPrompt)
-                            bot.sendMessage(clientChat, "You're onboarded! You can start learning by prompting the button or clicking on the keyboard buttons below.", replyMarkup = postOnboardingButtons(telegramProperties))
-                        }
-                    } else if (data.isRequestCallback()) {
-                        val assistantCallbackResponse = data.getRequestActionAssistantResponse()
-                        bot.sendMessage(clientChat, assistantCallbackResponse)
-                        bot.sendChatAction(clientChat, ChatAction.TYPING)
-                        val message = historyService.fetchMessageById(clientChat.id.toString(), callbackQuery.message?.messageId!!)
-                        val ch = historyService.fetchChatHistory(clientChat.id.toString())
-                        if (message != null) {
-                            openAiService.createMessage(ch?.threadId!!, MessageRequest.builder()
-                                .role("user")
-                                .content(data.getRequestActionUserImplicitPrompt(message.text!!))
-                                .build())
-                            runService.createAndRun(bot, callbackQuery.message!!)
-                        } else {
-                            bot.sendMessage(clientChat, "I'm sorry I don't remember this message you clicked on")
-                        }
-                    }
+                    callbacksHandler.handleCallback(bot, callbackQuery, runService)
                 }
                 command("currentThread") {
                     val chat = this.message.chatId()

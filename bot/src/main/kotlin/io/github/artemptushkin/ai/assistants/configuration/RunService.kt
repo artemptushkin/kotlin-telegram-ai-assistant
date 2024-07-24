@@ -9,10 +9,13 @@ import com.theokanning.openai.assistants.run.RunCreateRequest
 import com.theokanning.openai.assistants.run.SubmitToolOutputRequestItem
 import com.theokanning.openai.assistants.run.SubmitToolOutputsRequest
 import com.theokanning.openai.service.OpenAiService
-import io.github.artemptushkin.ai.assistants.telegram.*
+import io.github.artemptushkin.ai.assistants.openai.AssistantMessageProcessor
+import io.github.artemptushkin.ai.assistants.telegram.TelegramHistoryService
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ChatContext
 import io.github.artemptushkin.ai.assistants.telegram.conversation.ContextKey
 import io.github.artemptushkin.ai.assistants.telegram.conversation.toChat
+import io.github.artemptushkin.ai.assistants.telegram.sendMessageLoggingError
+import io.github.artemptushkin.ai.assistants.telegram.sendMessageMarkdownOrPlain
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger

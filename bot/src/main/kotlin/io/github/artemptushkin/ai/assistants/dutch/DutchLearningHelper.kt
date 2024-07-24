@@ -1,20 +1,19 @@
-package io.github.artemptushkin.ai.assistants.configuration
+package io.github.artemptushkin.ai.assistants.dutch
 
 import com.github.kotlintelegrambot.entities.InlineKeyboardMarkup
 import com.github.kotlintelegrambot.entities.ReplyMarkup
 import com.github.kotlintelegrambot.entities.keyboard.InlineKeyboardButton
-import io.github.artemptushkin.ai.assistants.telegram.buttonNotations
 
 val buttonsToCallbackData = mapOf(
     "Translation" to "request.translation",
     "List of words" to "request.list-of-words",
 )
 
-fun settingsInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
+fun dutchOnboardingInlineButtons(): ReplyMarkup = InlineKeyboardMarkup.create(
     listOf(
-        InlineKeyboardButton.CallbackData("Easy - 5 words", "settings.difficult:5"),
-        InlineKeyboardButton.CallbackData("Medium - 7 words", "settings.difficult:7"),
-        InlineKeyboardButton.CallbackData("Hard - 10 words", "settings.difficult:10"),
+        InlineKeyboardButton.CallbackData("Easy - 5 words", "onboarding.difficult:5"),
+        InlineKeyboardButton.CallbackData("Medium - 7 words", "onboarding.difficult:7"),
+        InlineKeyboardButton.CallbackData("Hard - 10 words", "onboarding.difficult:10"),
     )
 )
 
@@ -61,12 +60,12 @@ fun String.getRequestActionUserImplicitPrompt(message: String): String {
     }
 }
 
-fun String.isSettingsCallback(): Boolean = this.startsWith("settings")
+fun String.isOnboardingCallback(): Boolean = this.startsWith("onboarding")
 fun String.isRequestCallback(): Boolean = this.startsWith("request")
 
-fun String.isDifficultWordsSetting(): Boolean = this.startsWith("settings.difficult")
+fun String.isDifficultWordsSetting(): Boolean = this.startsWith("onboarding.difficult")
 
-fun String.getDifficultWordsNumber() = this.substringAfter("settings.difficult:").toInt()
+fun String.getDifficultWordsNumber() = this.substringAfter("onboarding.difficult:").toInt()
 
 fun initialDutchLearnerPrompt(wordsNumber: Int) = """
     I am learning Dutch and need your help learning words.

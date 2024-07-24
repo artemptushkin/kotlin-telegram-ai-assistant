@@ -1,4 +1,4 @@
-package io.github.artemptushkin.ai.assistants.words
+package io.github.artemptushkin.ai.assistants.dutch
 
 import com.theokanning.openai.assistants.message.MessageRequest
 import io.github.artemptushkin.ai.assistants.configuration.TelegramContext

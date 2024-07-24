@@ -16,8 +16,10 @@ data class WebHookProperties(
 data class BotProperties(
     val token: String = "",
     val helpMessage: String = "",
+    val startMessage: String = "",
     val buttons: List<Button> = emptyList(),
     val metadata: Map<String, String> = mutableMapOf(),
+    val isOnboardingEnabled: Boolean = false
 )
 
 data class Button(
@@ -25,3 +27,5 @@ data class Button(
     val text: String,
     val isBlocking: Boolean = false
 )
+
+fun BotProperties.id() = this.token.substringBefore(":")
