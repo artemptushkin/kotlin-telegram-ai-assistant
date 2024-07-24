@@ -1,7 +1,5 @@
-package io.github.artemptushkin.ai.assistants.configuration
+package io.github.artemptushkin.ai.assistants.dutch
 
-import io.github.artemptushkin.ai.assistants.dutch.buttonsToLayout
-import io.github.artemptushkin.ai.assistants.dutch.parseButtons
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

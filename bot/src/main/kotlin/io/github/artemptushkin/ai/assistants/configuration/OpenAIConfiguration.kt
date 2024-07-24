@@ -1,7 +1,6 @@
 package io.github.artemptushkin.ai.assistants.configuration
 
 import com.theokanning.openai.service.OpenAiService
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
