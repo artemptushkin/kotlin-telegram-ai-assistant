@@ -175,7 +175,7 @@ class TelegramConfiguration(
                         val history = historyService.fetchChatHistory(chat.id.toString())
                         threadManagementService.deleteThreadIfAcceptable(chat.id.toString(), history)
                     }
-                    if (message.text != null && !message.isCommand() && !message.toButton(telegramProperties).isBlocking) {
+                    if (message.text != null && !message.isCommand() && message.toButton(telegramProperties)?.isBlocking != true) {
                         bot.sendChatAction(chat, ChatAction.TYPING)
                         val threadId = chatHistory?.threadId
                         if (threadId == null) {
@@ -213,7 +213,7 @@ class TelegramConfiguration(
                                 "Unexpected error handled during the process, please repeat the message. If it doesn't help send /reset command to start a new session with the assistant."
                             )
                         }
-                    } else if (message.toButton(telegramProperties).isBlocking) {
+                    } else if (message.toButton(telegramProperties)?.isBlocking == true) {
                         val clientChat = this.message.chatId()
                         if (chatHistory?.threadId == null) {
                             bot.sendMessageLoggingError(
@@ -229,7 +229,7 @@ class TelegramConfiguration(
                                 message.text!!
                             )
                             logger.debug("Open AI message created: ${openAiMessage.id}")
-                            val assistantText = message.toButton(telegramProperties).assistantText
+                            val assistantText = message.toButton(telegramProperties)!!.assistantText
                             bot.sendMessage(clientChat, assistantText)
                             val openAiAssistantMessage = openAiService.createMessage(
                                 chatHistory.threadId, assistantText.toAssistantMessageRequest()
